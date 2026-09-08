@@ -91,19 +91,22 @@
 
       const fetchTasks = async () => {
         setIsLoading(true);
-        const { data, error } = await supabase.from('tasks').select('*').order('status', { ascending: true });
+        const { data, error } = await supabase.from('tasks').select('*').order('created_at', { ascending: false });
         if (!error) setTasks(data || []);
         setIsLoading(false);
       };
 
       const saveTask = async () => {
-        if (currentTask.id) await supabase.from('tasks').update(currentTask).eq('id', currentTask.id);
-        else await supabase.from('tasks').insert([currentTask]);
+        if (currentTask.id) {
+          const { created_at, ...updateData } = currentTask; // Omit created_at on update
+          await supabase.from('tasks').update(updateData).eq('id', currentTask.id);
+        } else {
+          await supabase.from('tasks').insert([currentTask]);
+        }
         await fetchTasks();
         setIsModalOpen(false);
       };
 
-      // --- NEW: DELETE FUNCTION ---
       const deleteTask = async () => {
         if (window.confirm("Are you sure you want to delete this task? This cannot be undone.")) {
           const { error } = await supabase.from('tasks').delete().eq('id', currentTask.id);
@@ -115,6 +118,18 @@
             setIsModalOpen(false);
           }
         }
+      };
+
+      const formatDate = (isoString) => {
+        if (!isoString) return '';
+        return new Date(isoString).toLocaleString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
       };
 
       if (isLoading) return <div className="p-8 text-xl font-bold text-gray-700">Loading your secure Master File...</div>;
@@ -142,7 +157,10 @@
                 <div className="space-y-4">
                   {tasks.filter(t => t.status === column).map(task => (
                     <div key={task.id} className="bg-white p-4 rounded shadow cursor-pointer hover:shadow-md border-l-4 border-blue-500 transition-shadow" onClick={() => { setCurrentTask(task); setIsModalOpen(true); }}>
-                      <div className="text-xs font-bold text-blue-600 mb-1">{task.jira_id || 'NO-JIRA'}</div>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-xs font-bold text-blue-600">{task.jira_id || 'NO-JIRA'}</span>
+                        <span className="text-[10px] text-gray-400">{formatDate(task.created_at)}</span>
+                      </div>
                       <div className="font-semibold text-gray-800 line-clamp-2">{task.title || 'Untitled Task'}</div>
                       <div className="text-xs text-gray-500 mt-2 truncate">{task.problem || 'No description...'}</div>
                     </div>
@@ -156,7 +174,12 @@
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
               <div className="bg-white rounded-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
                 <div className="flex justify-between items-center mb-6 border-b pb-4">
-                  <h2 className="text-2xl font-bold">Document Template</h2>
+                  <div>
+                    <h2 className="text-2xl font-bold">Document Template</h2>
+                    {currentTask.created_at && (
+                      <p className="text-xs text-gray-500 mt-1">Created: {formatDate(currentTask.created_at)}</p>
+                    )}
+                  </div>
                   <button onClick={() => setIsModalOpen(false)} className="text-gray-500 hover:text-red-500 font-bold text-xl">✕</button>
                 </div>
                 <div className="space-y-4">
@@ -190,7 +213,6 @@
                   </div>
                 </div>
                 <div className="mt-6 flex gap-4 border-t pt-4">
-                  {/* NEW: DELETE BUTTON (Only shows if task already exists) */}
                   {currentTask.id && (
                     <button onClick={deleteTask} className="px-4 py-2 bg-red-100 text-red-700 font-bold rounded hover:bg-red-200 mr-auto">
                       Delete Task
