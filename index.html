@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Master File Tracker</title>
+  
+  <!-- Tailwind CSS for styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- React and ReactDOM -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  
+  <!-- Babel to compile JSX in the browser -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-gray-100">
+  <!-- This is where React will inject our app -->
+  <div id="root"></div>
+
+  <!-- Our React Application Code -->
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // 1. INITIALIZE SUPABASE
+    // Replace these with your actual Supabase Project URL and Anon Key
+    const SUPABASE_URL = 'YOUR_SUPABASE_PROJECT_URL';
+    const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const COLUMNS = ['Active Jiras', 'Waiting Jiras', 'Parked/Paused Jiras', 'Done/Closed'];
+
+    const emptyTask = {
+      title: '',
+      jira_id: '',
+      status: 'Active Jiras',
+      problem: '',
+      searched: '',
+      actions: '',
+      notes: '',
+      related_files: '',
+      qa: '',
+      reporter_response: 'Hello _,\n\nThank you for raising this inquiry.\n\n___\n\nKind Regards'
+    };
+
+    function WorkspaceTracker() {
+      const [tasks, setTasks] = useState([]);
+      const [isModalOpen, setIsModalOpen] = useState(false);
+      const [currentTask, setCurrentTask] = useState(emptyTask);
+      const [isLoading, setIsLoading] = useState(true);
+
+      useEffect(() => {
+        fetchTasks();
+      }, []);
+
+      const fetchTasks = async () => {
+        setIsLoading(true);
+        const { data, error } = await supabase
+          .from('tasks')
+          .select('*')
+          .order('status', { ascending: true });
+          
+        if (error) {
+          console.error("Error fetching tasks:", error);
+          // Fallback data if Supabase isn't connected yet so you can see the UI
+          setTasks([]); 
+        } else {
+          setTasks(data || []);
+        }
+        setIsLoading(false);
+      };
+
+      const saveTask = async () => {
+        if (currentTask.id) {
+          // UPDATE
+          const { error } = await supabase
+            .from('tasks')
+            .update(currentTask)
+            .eq('id', currentTask.id);
+          if (error) console.error("Error updating:", error);
+        } else {
+          // INSERT
+          const { error } = await supabase
+            .from('tasks')
+            .insert([currentTask]);
+          if (error) console.error("Error inserting:", error);
+        }
+        
+        await fetchTasks();
+        setIsModalOpen(false);
+      };
+
+      const openNewTaskModal = () => {
+        setCurrentTask({ ...emptyTask });
+        setIsModalOpen(true);
+      };
+
+      if (isLoading) return <div className="p-8 text-xl font-bold">Loading your Master File...</div>;
+
+      return (
+        <div className="min-h-screen bg-gray-100 p-8 font-sans">
+          <div className="flex justify-between items-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-800">The Master File Tracker</h1>
+            <button 
+              onClick={openNewTaskModal}
+              className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 font-bold"
+            >
+              + New Jira Task
+            </button>
+          </div>
+
+          <div className="flex gap-6 overflow-x-auto pb-4">
+            {COLUMNS.map(column => (
+              <div key={column} className="bg-gray-200 rounded-lg p-4 w-80 flex-shrink-0 min-h-[500px]">
+                <h2 className="font-bold text-gray-700 mb-4 border-b border-gray-300 pb-2 uppercase text-sm">
+                  {column} ({tasks.filter(t => t.status === column).length})
+                </h2>
+                
+                <div className="space-y-4">
+                  {tasks.filter(t => t.status === column).map(task => (
+                    <div 
+                      key={task.id} 
+                      className="bg-white p-4 rounded shadow cursor-pointer hover:shadow-md border-l-4 border-blue-500 transition-shadow"
+                      onClick={() => { setCurrentTask(task); setIsModalOpen(true); }}
+                    >
+                      <div className="text-xs font-bold text-blue-600 mb-1">{task.jira_id || 'NO-JIRA'}</div>
+                      <div className="font-semibold text-gray-800 line-clamp-2">{task.title || 'Untitled Task'}</div>
+                      <div className="text-xs text-gray-500 mt-2 truncate">
+                        {task.problem || 'No description...'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {isModalOpen && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
+                <div className="flex justify-between items-center mb-6 border-b pb-4">
+                  <h2 className="text-2xl font-bold">Document Template</h2>
+                  <button onClick={() => setIsModalOpen(false)} className="text-gray-500 hover:text-red-500 font-bold text-xl">✕</button>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Title</label>
+                      <input type="text" className="w-full border border-gray-300 p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" value={currentTask.title} onChange={e => setCurrentTask({...currentTask, title: e.target.value})} placeholder="e.g. Flexible Ticket: tracking usage" />
+                    </div>
+                    <div className="w-1/3">
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Jira Link/ID</label>
+                      <input type="text" className="w-full border border-gray-300 p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" value={currentTask.jira_id} onChange={e => setCurrentTask({...currentTask, jira_id: e.target.value})} placeholder="OPPR-11179" />
+                    </div>
+                    <div className="w-1/3">
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Status</label>
+                      <select className="w-full border border-gray-300 p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" value={currentTask.status} onChange={e => setCurrentTask({...currentTask, status: e.target.value})}>
+                        {COLUMNS.map(col => <option key={col} value={col}>{col}</option>)}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">What’s the problem or task</label>
+                    <textarea className="w-full border border-gray-300 p-2 rounded h-24 focus:outline-none focus:ring-2 focus:ring-blue-500" value={currentTask.problem} onChange={e => setCurrentTask({...currentTask, problem: e.target.value})}></textarea>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Where I searched</label>
+                    <textarea className="w-full border border-gray-300 p-2 rounded h-16 focus:outline-none focus:ring-2 focus:ring-blue-500" value={currentTask.searched} onChange={e => setCurrentTask({...currentTask, searched: e.target.value})}></textarea>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Actions</label>
+                    <textarea className="w-full border border-gray-300 p-2 rounded h-24 focus:outline-none focus:ring-2 focus:ring-blue-500" value={currentTask.actions} onChange={e => setCurrentTask({...currentTask, actions: e.target.value})}></textarea>
+                  </div>
+
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Notes</label>
+                      <textarea className="w-full border border-gray-300 p-2 rounded h-24 focus:outline-none focus:ring-2 focus:ring-blue-500" value={currentTask.notes} onChange={e => setCurrentTask({...currentTask, notes: e.target.value})}></textarea>
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Related Files</label>
+                      <textarea className="w-full border border-gray-300 p-2 rounded h-24 focus:outline-none focus:ring-2 focus:ring-blue-500" value={currentTask.related_files} onChange={e => setCurrentTask({...currentTask, related_files: e.target.value})}></textarea>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Questions & Answers</label>
+                    <textarea className="w-full border border-gray-300 p-2 rounded h-24 focus:outline-none focus:ring-2 focus:ring-blue-500" value={currentTask.qa} onChange={e => setCurrentTask({...currentTask, qa: e.target.value})}></textarea>
+                  </div>
+
+                  <div className="bg-blue-50 p-4 border border-blue-200 rounded">
+                    <label className="block text-sm font-bold text-blue-800 mb-2">Response to Reporter</label>
+                    <textarea className="w-full border border-blue-200 p-2 rounded h-32 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" value={currentTask.reporter_response} onChange={e => setCurrentTask({...currentTask, reporter_response: e.target.value})}></textarea>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex justify-end gap-4 border-t pt-4">
+                  <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded font-bold">Cancel</button>
+                  <button onClick={saveTask} className="px-6 py-2 bg-green-600 text-white font-bold rounded hover:bg-green-700">Save Task</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Render the React application into the DOM
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<WorkspaceTracker />);
+  </script>
+</body>
+</html>
