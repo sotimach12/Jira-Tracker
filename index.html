@@ -22,26 +22,56 @@
 
     const COLUMNS = ['Active Jiras', 'Waiting Jiras', 'Parked/Paused Jiras', 'Done/Closed'];
     
-    // Page background options
+    // --- EXPANDED PAGE BACKGROUND OPTIONS ---
     const BACKGROUND_COLORS = [
+      // Pastel / Light
       { name: 'Mint Green', value: 'bg-emerald-100' },
       { name: 'Classic Gray', value: 'bg-gray-100' },
       { name: 'Slate Blue', value: 'bg-slate-200' },
       { name: 'Soft Blue', value: 'bg-blue-100' },
       { name: 'Warm Amber', value: 'bg-amber-100' },
       { name: 'Rose Pink', value: 'bg-rose-100' },
-      { name: 'Dark Mode', value: 'bg-gray-900' }
+      { name: 'Lavender', value: 'bg-purple-100' },
+      
+      // Intense / Vibrant Colors
+      { name: '🔥 Electric Blue', value: 'bg-blue-600' },
+      { name: '🔥 Deep Indigo', value: 'bg-indigo-700' },
+      { name: '🔥 Emerald Green', value: 'bg-emerald-600' },
+      { name: '🔥 Crimson Red', value: 'bg-rose-600' },
+      { name: '🔥 Sunset Orange', value: 'bg-orange-500' },
+      { name: '🔥 Golden Amber', value: 'bg-amber-500' },
+      { name: '🔥 Royal Violet', value: 'bg-purple-700' },
+      { name: '🔥 Hot Pink', value: 'bg-fuchsia-600' },
+      { name: '🔥 Deep Teal', value: 'bg-teal-700' },
+      
+      // Dark / Stealth Modes
+      { name: '🌙 Midnight Black', value: 'bg-gray-950' },
+      { name: '🌙 Dark Gray', value: 'bg-gray-900' },
+      { name: '🌙 Charcoal Blue', value: 'bg-slate-900' }
     ];
 
-    // Column background options
+    // --- EXPANDED COLUMN CONTAINER OPTIONS ---
     const COLUMN_COLORS = [
-      { name: 'Light Gray', value: 'bg-gray-200/80 border-gray-300 text-gray-700' },
-      { name: 'Pure White', value: 'bg-white border-gray-200 text-gray-800 shadow-sm' },
+      // Light / Soft
+      { name: 'Light Gray', value: 'bg-gray-200/90 border-gray-300 text-gray-800' },
+      { name: 'Pure White', value: 'bg-white/95 border-gray-300 text-gray-900 shadow-md' },
       { name: 'Soft Blue', value: 'bg-blue-50/90 border-blue-200 text-blue-900' },
       { name: 'Soft Green', value: 'bg-emerald-50/90 border-emerald-200 text-emerald-900' },
       { name: 'Soft Yellow', value: 'bg-amber-50/90 border-amber-200 text-amber-900' },
       { name: 'Soft Purple', value: 'bg-purple-50/90 border-purple-200 text-purple-900' },
-      { name: 'Dark Gray', value: 'bg-gray-800 border-gray-700 text-gray-200' }
+      
+      // Intense / High Contrast Colors
+      { name: '🔥 Bold White (Glass)', value: 'bg-white/80 backdrop-blur-md border-white/40 text-gray-900 shadow-xl' },
+      { name: '🔥 Neon Blue', value: 'bg-blue-900/90 border-blue-400 text-blue-100 shadow-lg' },
+      { name: '🔥 Forest Emerald', value: 'bg-emerald-900/90 border-emerald-400 text-emerald-100 shadow-lg' },
+      { name: '🔥 Royal Purple', value: 'bg-purple-900/90 border-purple-400 text-purple-100 shadow-lg' },
+      { name: '🔥 Intense Crimson', value: 'bg-rose-900/90 border-rose-400 text-rose-100 shadow-lg' },
+      { name: '🔥 Bright Gold', value: 'bg-amber-400 border-amber-600 text-amber-950 shadow-lg' },
+      { name: '🔥 Electric Cyan', value: 'bg-cyan-500 border-cyan-300 text-cyan-950 shadow-lg' },
+      
+      // Dark Modes
+      { name: '🌙 Dark Slate', value: 'bg-slate-800 border-slate-700 text-slate-100' },
+      { name: '🌙 Onyx Black', value: 'bg-black/90 border-gray-800 text-gray-100 shadow-xl' }
     ];
 
     const emptyTask = {
@@ -110,12 +140,10 @@
       const [currentTask, setCurrentTask] = useState(emptyTask);
       const [isLoading, setIsLoading] = useState(true);
       
-      // Page background preference
       const [bgColor, setBgColor] = useState(() => {
-        return localStorage.getItem('tracker_bg') || 'bg-emerald-100';
+        return localStorage.getItem('tracker_bg') || 'bg-blue-600';
       });
 
-      // Column background preference
       const [colColor, setColColor] = useState(() => {
         return localStorage.getItem('tracker_col') || COLUMN_COLORS[0].value;
       });
@@ -179,10 +207,10 @@
 
       return (
         <div className={`min-h-screen p-8 font-sans transition-colors duration-300 ${bgColor}`}>
-          <div className="flex justify-between items-center mb-8 bg-white/80 backdrop-blur p-4 rounded-xl shadow-sm border">
+          <div className="flex justify-between items-center mb-8 bg-white/90 backdrop-blur-md p-4 rounded-xl shadow-lg border border-white/20">
             <div>
-              <h1 className="text-3xl font-bold text-gray-800">The Master File Tracker</h1>
-              <button onClick={() => supabase.auth.signOut()} className="text-sm font-bold text-red-500 hover:text-red-700 mt-1">
+              <h1 className="text-3xl font-bold text-gray-900">The Master File Tracker</h1>
+              <button onClick={() => supabase.auth.signOut()} className="text-sm font-bold text-red-600 hover:text-red-800 mt-1">
                 Securely Log Out
               </button>
             </div>
@@ -190,11 +218,11 @@
             <div className="flex items-center gap-6">
               {/* Page Theme */}
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-gray-600 uppercase">Page:</span>
+                <span className="text-xs font-bold text-gray-700 uppercase">Page Theme:</span>
                 <select 
                   value={bgColor} 
                   onChange={e => changeBgColor(e.target.value)}
-                  className="border border-gray-300 rounded px-2 py-1 text-sm bg-white font-medium focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="border border-gray-300 rounded px-2 py-1 text-sm bg-white font-medium focus:ring-2 focus:ring-blue-500 outline-none shadow-sm cursor-pointer"
                 >
                   {BACKGROUND_COLORS.map(c => (
                     <option key={c.value} value={c.value}>{c.name}</option>
@@ -204,11 +232,11 @@
 
               {/* Column Theme */}
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-gray-600 uppercase">Columns:</span>
+                <span className="text-xs font-bold text-gray-700 uppercase">Columns:</span>
                 <select 
                   value={colColor} 
                   onChange={e => changeColColor(e.target.value)}
-                  className="border border-gray-300 rounded px-2 py-1 text-sm bg-white font-medium focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="border border-gray-300 rounded px-2 py-1 text-sm bg-white font-medium focus:ring-2 focus:ring-blue-500 outline-none shadow-sm cursor-pointer"
                 >
                   {COLUMN_COLORS.map(c => (
                     <option key={c.value} value={c.value}>{c.name}</option>
@@ -216,7 +244,7 @@
                 </select>
               </div>
 
-              <button onClick={() => { setCurrentTask({ ...emptyTask }); setIsModalOpen(true); }} className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 font-bold">
+              <button onClick={() => { setCurrentTask({ ...emptyTask }); setIsModalOpen(true); }} className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 font-bold transition-all">
                 + New Jira Task
               </button>
             </div>
@@ -224,19 +252,19 @@
 
           <div className="flex gap-6 overflow-x-auto pb-4">
             {COLUMNS.map(column => (
-              <div key={column} className={`rounded-lg p-4 w-80 flex-shrink-0 min-h-[500px] border ${colColor}`}>
-                <h2 className="font-bold mb-4 border-b pb-2 uppercase text-sm border-current opacity-80">
+              <div key={column} className={`rounded-xl p-4 w-80 flex-shrink-0 min-h-[500px] border transition-all ${colColor}`}>
+                <h2 className="font-bold mb-4 border-b pb-2 uppercase text-sm border-current opacity-90">
                   {column} ({tasks.filter(t => t.status === column).length})
                 </h2>
                 <div className="space-y-4">
                   {tasks.filter(t => t.status === column).map(task => (
-                    <div key={task.id} className="bg-white p-4 rounded shadow cursor-pointer hover:shadow-md border-l-4 border-blue-500 transition-shadow" onClick={() => { setCurrentTask(task); setIsModalOpen(true); }}>
+                    <div key={task.id} className="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-lg border-l-4 border-blue-600 transition-all transform hover:-translate-y-0.5" onClick={() => { setCurrentTask(task); setIsModalOpen(true); }}>
                       <div className="flex justify-between items-center mb-1">
                         <span className="text-xs font-bold text-blue-600">{task.jira_id || 'NO-JIRA'}</span>
                         <span className="text-[10px] text-gray-400">{formatDate(task.created_at)}</span>
                       </div>
-                      <div className="font-semibold text-gray-800 line-clamp-2">{task.title || 'Untitled Task'}</div>
-                      <div className="text-xs text-gray-500 mt-2 truncate">{task.problem || 'No description...'}</div>
+                      <div className="font-semibold text-gray-900 line-clamp-2">{task.title || 'Untitled Task'}</div>
+                      <div className="text-xs text-gray-600 mt-2 truncate">{task.problem || 'No description...'}</div>
                     </div>
                   ))}
                 </div>
@@ -245,11 +273,11 @@
           </div>
 
           {isModalOpen && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-              <div className="bg-white rounded-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
                 <div className="flex justify-between items-center mb-6 border-b pb-4">
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-800">Document Template</h2>
+                    <h2 className="text-2xl font-bold text-gray-900">Document Template</h2>
                     {currentTask.created_at && (
                       <p className="text-xs text-gray-500 mt-1">Created: {formatDate(currentTask.created_at)}</p>
                     )}
