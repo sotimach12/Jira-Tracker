@@ -22,44 +22,28 @@
 
     const COLUMNS = ['To Do', 'Active Jiras', 'Waiting Jiras', 'Parked/Paused Jiras', 'Done/Closed'];
     
-    const BACKGROUND_COLORS = [
-      { name: 'Mint Green', value: 'bg-emerald-100' },
-      { name: 'Classic Gray', value: 'bg-gray-100' },
-      { name: 'Slate Blue', value: 'bg-slate-200' },
-      { name: 'Soft Blue', value: 'bg-blue-100' },
-      { name: 'Warm Amber', value: 'bg-amber-100' },
-      { name: 'Rose Pink', value: 'bg-rose-100' },
-      { name: 'Lavender', value: 'bg-purple-100' },
-      { name: 'Electric Blue', value: 'bg-blue-600' },
-      { name: 'Deep Indigo', value: 'bg-indigo-700' },
-      { name: 'Emerald Green', value: 'bg-emerald-600' },
-      { name: 'Crimson Red', value: 'bg-rose-600' },
-      { name: 'Sunset Orange', value: 'bg-orange-500' },
-      { name: 'Golden Amber', value: 'bg-amber-500' },
-      { name: 'Royal Violet', value: 'bg-purple-700' },
-      { name: 'Hot Pink', value: 'bg-fuchsia-600' },
-      { name: 'Deep Teal', value: 'bg-teal-700' },
-      { name: 'Midnight Black', value: 'bg-gray-950' },
-      { name: 'Dark Gray', value: 'bg-gray-900' },
-      { name: 'Charcoal Blue', value: 'bg-slate-900' }
-    ];
-
-    const COLUMN_COLORS = [
-      { name: 'Light Gray', value: 'bg-gray-200/90 border-gray-300 text-gray-800' },
-      { name: 'Pure White', value: 'bg-white/95 border-gray-300 text-gray-900 shadow-md' },
-      { name: 'Soft Blue', value: 'bg-blue-50/90 border-blue-200 text-blue-900' },
-      { name: 'Soft Green', value: 'bg-emerald-50/90 border-emerald-200 text-emerald-900' },
-      { name: 'Soft Yellow', value: 'bg-amber-50/90 border-amber-200 text-amber-900' },
-      { name: 'Soft Purple', value: 'bg-purple-50/90 border-purple-200 text-purple-900' },
-      { name: 'Bold White (Glass)', value: 'bg-white/80 backdrop-blur-md border-white/40 text-gray-900 shadow-xl' },
-      { name: 'Neon Blue', value: 'bg-blue-900/90 border-blue-400 text-blue-100 shadow-lg' },
-      { name: 'Forest Emerald', value: 'bg-emerald-900/90 border-emerald-400 text-emerald-100 shadow-lg' },
-      { name: 'Royal Purple', value: 'bg-purple-900/90 border-purple-400 text-purple-100 shadow-lg' },
-      { name: 'Intense Crimson', value: 'bg-rose-900/90 border-rose-400 text-rose-100 shadow-lg' },
-      { name: 'Bright Gold', value: 'bg-amber-400 border-amber-600 text-amber-950 shadow-lg' },
-      { name: 'Electric Cyan', value: 'bg-cyan-500 border-cyan-300 text-cyan-950 shadow-lg' },
-      { name: 'Dark Slate', value: 'bg-slate-800 border-slate-700 text-slate-100' },
-      { name: 'Onyx Black', value: 'bg-black/90 border-gray-800 text-gray-100 shadow-xl' }
+    // --- SHARED UNIFIED COLOR PALETTE FOR BOTH DROPDOWNS ---
+    const UNIFIED_COLOR_OPTIONS = [
+      { name: 'Mint Green', bgValue: 'bg-emerald-100', colValue: 'bg-emerald-100 border-emerald-300 text-emerald-950' },
+      { name: 'Classic Gray', bgValue: 'bg-gray-100', colValue: 'bg-gray-200/90 border-gray-300 text-gray-800' },
+      { name: 'Slate Blue', bgValue: 'bg-slate-200', colValue: 'bg-slate-200 border-slate-300 text-slate-900' },
+      { name: 'Soft Blue', bgValue: 'bg-blue-100', colValue: 'bg-blue-100 border-blue-200 text-blue-950' },
+      { name: 'Warm Amber', bgValue: 'bg-amber-100', colValue: 'bg-amber-100 border-amber-300 text-amber-950' },
+      { name: 'Rose Pink', bgValue: 'bg-rose-100', colValue: 'bg-rose-100 border-rose-300 text-rose-950' },
+      { name: 'Lavender', bgValue: 'bg-purple-100', colValue: 'bg-purple-100 border-purple-300 text-purple-950' },
+      { name: 'Pure White', bgValue: 'bg-white', colValue: 'bg-white/95 border-gray-300 text-gray-900 shadow-md' },
+      { name: 'Electric Blue', bgValue: 'bg-blue-600', colValue: 'bg-blue-600 border-blue-400 text-white shadow-lg' },
+      { name: 'Deep Indigo', bgValue: 'bg-indigo-700', colValue: 'bg-indigo-700 border-indigo-500 text-white shadow-lg' },
+      { name: 'Emerald Green', bgValue: 'bg-emerald-600', colValue: 'bg-emerald-600 border-emerald-400 text-white shadow-lg' },
+      { name: 'Crimson Red', bgValue: 'bg-rose-600', colValue: 'bg-rose-600 border-rose-400 text-white shadow-lg' },
+      { name: 'Sunset Orange', bgValue: 'bg-orange-500', colValue: 'bg-orange-500 border-orange-400 text-white shadow-lg' },
+      { name: 'Golden Amber', bgValue: 'bg-amber-500', colValue: 'bg-amber-500 border-amber-600 text-amber-950 shadow-lg' },
+      { name: 'Royal Violet', bgValue: 'bg-purple-700', colValue: 'bg-purple-700 border-purple-500 text-white shadow-lg' },
+      { name: 'Hot Pink', bgValue: 'bg-fuchsia-600', colValue: 'bg-fuchsia-600 border-fuchsia-400 text-white shadow-lg' },
+      { name: 'Deep Teal', bgValue: 'bg-teal-700', colValue: 'bg-teal-700 border-teal-500 text-white shadow-lg' },
+      { name: 'Midnight Black', bgValue: 'bg-gray-950', colValue: 'bg-gray-950 border-gray-800 text-gray-100 shadow-xl' },
+      { name: 'Dark Gray', bgValue: 'bg-gray-900', colValue: 'bg-gray-900 border-gray-800 text-gray-100 shadow-xl' },
+      { name: 'Charcoal Blue', bgValue: 'bg-slate-900', colValue: 'bg-slate-900 border-slate-800 text-slate-100 shadow-xl' }
     ];
 
     const emptyTask = {
@@ -133,7 +117,7 @@
       });
 
       const [colColor, setColColor] = useState(() => {
-        return localStorage.getItem('tracker_col') || COLUMN_COLORS[0].value;
+        return localStorage.getItem('tracker_col') || UNIFIED_COLOR_OPTIONS[1].colValue;
       });
 
       useEffect(() => { fetchTasks(); }, []);
@@ -211,8 +195,8 @@
                   onChange={e => changeBgColor(e.target.value)}
                   className="border border-gray-300 rounded px-2 py-1 text-sm bg-white font-medium focus:ring-2 focus:ring-blue-500 outline-none shadow-sm cursor-pointer"
                 >
-                  {BACKGROUND_COLORS.map(c => (
-                    <option key={c.value} value={c.value}>{c.name}</option>
+                  {UNIFIED_COLOR_OPTIONS.map(c => (
+                    <option key={c.name} value={c.bgValue}>{c.name}</option>
                   ))}
                 </select>
               </div>
@@ -224,8 +208,8 @@
                   onChange={e => changeColColor(e.target.value)}
                   className="border border-gray-300 rounded px-2 py-1 text-sm bg-white font-medium focus:ring-2 focus:ring-blue-500 outline-none shadow-sm cursor-pointer"
                 >
-                  {COLUMN_COLORS.map(c => (
-                    <option key={c.value} value={c.value}>{c.name}</option>
+                  {UNIFIED_COLOR_OPTIONS.map(c => (
+                    <option key={c.name} value={c.colValue}>{c.name}</option>
                   ))}
                 </select>
               </div>
