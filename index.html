@@ -21,6 +21,18 @@
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     const COLUMNS = ['Active Jiras', 'Waiting Jiras', 'Parked/Paused Jiras', 'Done/Closed'];
+    
+    // Background color options
+    const BACKGROUND_COLORS = [
+      { name: 'Classic Gray', value: 'bg-gray-100' },
+      { name: 'Slate Blue', value: 'bg-slate-200' },
+      { name: 'Soft Blue', value: 'bg-blue-100' },
+      { name: 'Mint Green', value: 'bg-emerald-100' },
+      { name: 'Warm Amber', value: 'bg-amber-100' },
+      { name: 'Rose Pink', value: 'bg-rose-100' },
+      { name: 'Dark Mode', value: 'bg-gray-900' }
+    ];
+
     const emptyTask = {
       title: '', jira_id: '', status: 'Active Jiras', problem: '', searched: '',
       actions: '', notes: '', related_files: '', qa: '',
@@ -86,8 +98,18 @@
       const [isModalOpen, setIsModalOpen] = useState(false);
       const [currentTask, setCurrentTask] = useState(emptyTask);
       const [isLoading, setIsLoading] = useState(true);
+      
+      // Load saved color preference or default to classic gray
+      const [bgColor, setBgColor] = useState(() => {
+        return localStorage.getItem('tracker_bg') || 'bg-gray-100';
+      });
 
       useEffect(() => { fetchTasks(); }, []);
+
+      const changeBgColor = (colorClass) => {
+        setBgColor(colorClass);
+        localStorage.setItem('tracker_bg', colorClass);
+      };
 
       const fetchTasks = async () => {
         setIsLoading(true);
@@ -98,7 +120,7 @@
 
       const saveTask = async () => {
         if (currentTask.id) {
-          const { created_at, ...updateData } = currentTask; // Omit created_at on update
+          const { created_at, ...updateData } = currentTask;
           await supabase.from('tasks').update(updateData).eq('id', currentTask.id);
         } else {
           await supabase.from('tasks').insert([currentTask]);
@@ -134,24 +156,43 @@
 
       if (isLoading) return <div className="p-8 text-xl font-bold text-gray-700">Loading your secure Master File...</div>;
 
+      const isDarkMode = bgColor === 'bg-gray-900';
+
       return (
-        <div className="min-h-screen bg-gray-100 p-8 font-sans">
-          <div className="flex justify-between items-center mb-8">
+        <div className={`min-h-screen p-8 font-sans transition-colors duration-300 ${bgColor}`}>
+          <div className="flex justify-between items-center mb-8 bg-white/80 backdrop-blur p-4 rounded-xl shadow-sm border">
             <div>
               <h1 className="text-3xl font-bold text-gray-800">The Master File Tracker</h1>
               <button onClick={() => supabase.auth.signOut()} className="text-sm font-bold text-red-500 hover:text-red-700 mt-1">
                 Securely Log Out
               </button>
             </div>
-            <button onClick={() => { setCurrentTask({ ...emptyTask }); setIsModalOpen(true); }} className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 font-bold">
-              + New Jira Task
-            </button>
+
+            <div className="flex items-center gap-6">
+              {/* Color Selector */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-gray-600 uppercase">Theme:</span>
+                <select 
+                  value={bgColor} 
+                  onChange={e => changeBgColor(e.target.value)}
+                  className="border border-gray-300 rounded px-2 py-1 text-sm bg-white font-medium focus:ring-2 focus:ring-blue-500 outline-none"
+                >
+                  {BACKGROUND_COLORS.map(c => (
+                    <option key={c.value} value={c.value}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <button onClick={() => { setCurrentTask({ ...emptyTask }); setIsModalOpen(true); }} className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 font-bold">
+                + New Jira Task
+              </button>
+            </div>
           </div>
 
           <div className="flex gap-6 overflow-x-auto pb-4">
             {COLUMNS.map(column => (
-              <div key={column} className="bg-gray-200 rounded-lg p-4 w-80 flex-shrink-0 min-h-[500px]">
-                <h2 className="font-bold text-gray-700 mb-4 border-b border-gray-300 pb-2 uppercase text-sm">
+              <div key={column} className={`rounded-lg p-4 w-80 flex-shrink-0 min-h-[500px] ${isDarkMode ? 'bg-gray-800 border border-gray-700' : 'bg-gray-200/80'}`}>
+                <h2 className={`font-bold mb-4 border-b pb-2 uppercase text-sm ${isDarkMode ? 'text-gray-200 border-gray-700' : 'text-gray-700 border-gray-300'}`}>
                   {column} ({tasks.filter(t => t.status === column).length})
                 </h2>
                 <div className="space-y-4">
@@ -175,7 +216,7 @@
               <div className="bg-white rounded-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
                 <div className="flex justify-between items-center mb-6 border-b pb-4">
                   <div>
-                    <h2 className="text-2xl font-bold">Document Template</h2>
+                    <h2 className="text-2xl font-bold text-gray-800">Document Template</h2>
                     {currentTask.created_at && (
                       <p className="text-xs text-gray-500 mt-1">Created: {formatDate(currentTask.created_at)}</p>
                     )}
