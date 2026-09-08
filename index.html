@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>The Master File Tracker</title>
+  <title>The Jira Tracker</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
@@ -20,8 +20,7 @@
     const SUPABASE_KEY = 'sb_publishable_Va3ZUBZzd02bDXB_3JbRLw_PgndY5gO';
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // --- ADDED "TO DO" AS THE FIRST COLUMN ---
-    const COLUMNS = ['TO DO', 'Active Jiras', 'Waiting Jiras', 'Parked/Paused Jiras', 'Done/Closed'];
+    const COLUMNS = ['To Do', 'Active Jiras', 'Waiting Jiras', 'Parked/Paused Jiras', 'Done/Closed'];
     
     const BACKGROUND_COLORS = [
       { name: 'Mint Green', value: 'bg-emerald-100' },
@@ -64,9 +63,9 @@
     ];
 
     const emptyTask = {
-      title: '', jira_id: '', status: 'TO DO', problem: '', searched: '',
+      title: '', jira_id: '', status: 'To Do', problem: '', searched: '',
       actions: '', notes: '', related_files: '', qa: '',
-      reporter_response: 'Hello _,\n\nThank you for raising this inquiry.\n\n___\n\nKind Regards'
+      reporter_response: 'Hello _,\n\nThank You For Raising This Inquiry.\n\n___\n\nKind Regards'
     };
 
     function Auth() {
@@ -85,7 +84,7 @@
         if (isSignUp) {
           const res = await supabase.auth.signUp({ email, password });
           error = res.error;
-          if (!error) setMessage('Success! You can now log in.');
+          if (!error) setMessage('Success! You Can Now Log In.');
         } else {
           const res = await supabase.auth.signInWithPassword({ email, password });
           error = res.error;
@@ -116,7 +115,7 @@
             </form>
             
             <p className="mt-6 text-sm text-center text-gray-600 cursor-pointer hover:text-blue-600 font-semibold" onClick={() => {setIsSignUp(!isSignUp); setMessage('');}}>
-              {isSignUp ? 'Already have an account? Log In' : "Don't have an account? Sign Up"}
+              {isSignUp ? 'Already Have An Account? Log In' : "Don't Have An Account? Sign Up"}
             </p>
           </div>
         </div>
@@ -168,11 +167,11 @@
       };
 
       const deleteTask = async () => {
-        if (window.confirm("Are you sure you want to delete this task? This cannot be undone.")) {
+        if (window.confirm("Are You Sure You Want To Delete This Task? This Cannot Be Undone.")) {
           const { error } = await supabase.from('tasks').delete().eq('id', currentTask.id);
           if (error) {
             console.error("Error deleting:", error);
-            alert("Failed to delete task.");
+            alert("Failed To Delete Task.");
           } else {
             await fetchTasks();
             setIsModalOpen(false);
@@ -192,13 +191,13 @@
         });
       };
 
-      if (isLoading) return <div className="p-8 text-xl font-bold text-gray-700">Loading your secure Master File...</div>;
+      if (isLoading) return <div className="p-8 text-xl font-bold text-gray-700">Loading Your Secure Jira Tracker...</div>;
 
       return (
         <div className={`min-h-screen p-8 font-sans transition-colors duration-300 ${bgColor}`}>
           <div className="flex justify-between items-center mb-8 bg-white/90 backdrop-blur-md p-4 rounded-xl shadow-lg border border-white/20">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">The Master File Tracker</h1>
+              <h1 className="text-3xl font-bold text-gray-900">The Jira Tracker</h1>
               <button onClick={() => supabase.auth.signOut()} className="text-sm font-bold text-red-600 hover:text-red-800 mt-1">
                 Securely Log Out
               </button>
@@ -240,18 +239,18 @@
           <div className="flex gap-6 overflow-x-auto pb-4">
             {COLUMNS.map(column => (
               <div key={column} className={`rounded-xl p-4 w-80 flex-shrink-0 min-h-[500px] border transition-all ${colColor}`}>
-                <h2 className="font-bold mb-4 border-b pb-2 uppercase text-sm border-current opacity-90">
+                <h2 className="font-bold mb-4 border-b pb-2 text-sm border-current opacity-90">
                   {column} ({tasks.filter(t => t.status === column).length})
                 </h2>
                 <div className="space-y-4">
                   {tasks.filter(t => t.status === column).map(task => (
                     <div key={task.id} className="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-lg border-l-4 border-blue-600 transition-all transform hover:-translate-y-0.5" onClick={() => { setCurrentTask(task); setIsModalOpen(true); }}>
                       <div className="flex justify-between items-center mb-1">
-                        <span className="text-xs font-bold text-blue-600">{task.jira_id || 'NO-JIRA'}</span>
+                        <span className="text-xs font-bold text-blue-600">{task.jira_id || 'No Jira ID'}</span>
                         <span className="text-[10px] text-gray-400">{formatDate(task.created_at)}</span>
                       </div>
                       <div className="font-semibold text-gray-900 line-clamp-2">{task.title || 'Untitled Task'}</div>
-                      <div className="text-xs text-gray-600 mt-2 truncate">{task.problem || 'No description...'}</div>
+                      <div className="text-xs text-gray-600 mt-2 truncate">{task.problem || 'No Description...'}</div>
                     </div>
                   ))}
                 </div>
@@ -288,8 +287,8 @@
                       </select>
                     </div>
                   </div>
-                  <div><label className="block text-sm font-bold text-gray-700 mb-1">What’s the problem or task</label><textarea className="w-full border border-gray-300 p-2 rounded h-24" value={currentTask.problem} onChange={e => setCurrentTask({...currentTask, problem: e.target.value})}></textarea></div>
-                  <div><label className="block text-sm font-bold text-gray-700 mb-1">Where I searched</label><textarea className="w-full border border-gray-300 p-2 rounded h-16" value={currentTask.searched} onChange={e => setCurrentTask({...currentTask, searched: e.target.value})}></textarea></div>
+                  <div><label className="block text-sm font-bold text-gray-700 mb-1">What's The Problem Or Task</label><textarea className="w-full border border-gray-300 p-2 rounded h-24" value={currentTask.problem} onChange={e => setCurrentTask({...currentTask, problem: e.target.value})}></textarea></div>
+                  <div><label className="block text-sm font-bold text-gray-700 mb-1">Where I Searched</label><textarea className="w-full border border-gray-300 p-2 rounded h-16" value={currentTask.searched} onChange={e => setCurrentTask({...currentTask, searched: e.target.value})}></textarea></div>
                   <div><label className="block text-sm font-bold text-gray-700 mb-1">Actions</label><textarea className="w-full border border-gray-300 p-2 rounded h-24" value={currentTask.actions} onChange={e => setCurrentTask({...currentTask, actions: e.target.value})}></textarea></div>
                   <div className="flex gap-4">
                     <div className="flex-1"><label className="block text-sm font-bold text-gray-700 mb-1">Notes</label><textarea className="w-full border border-gray-300 p-2 rounded h-24" value={currentTask.notes} onChange={e => setCurrentTask({...currentTask, notes: e.target.value})}></textarea></div>
@@ -297,7 +296,7 @@
                   </div>
                   <div><label className="block text-sm font-bold text-gray-700 mb-1">Questions & Answers</label><textarea className="w-full border border-gray-300 p-2 rounded h-24" value={currentTask.qa} onChange={e => setCurrentTask({...currentTask, qa: e.target.value})}></textarea></div>
                   <div className="bg-blue-50 p-4 border border-blue-200 rounded">
-                    <label className="block text-sm font-bold text-blue-800 mb-2">Response to Reporter</label>
+                    <label className="block text-sm font-bold text-blue-800 mb-2">Response To Reporter</label>
                     <textarea className="w-full border border-blue-200 p-2 rounded h-32 font-mono text-sm" value={currentTask.reporter_response} onChange={e => setCurrentTask({...currentTask, reporter_response: e.target.value})}></textarea>
                   </div>
                 </div>
