@@ -20,11 +20,10 @@
     const SUPABASE_KEY = 'sb_publishable_Va3ZUBZzd02bDXB_3JbRLw_PgndY5gO';
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    const COLUMNS = ['Active Jiras', 'Waiting Jiras', 'Parked/Paused Jiras', 'Done/Closed'];
+    // --- ADDED "TO DO" AS THE FIRST COLUMN ---
+    const COLUMNS = ['TO DO', 'Active Jiras', 'Waiting Jiras', 'Parked/Paused Jiras', 'Done/Closed'];
     
-    // --- EXPANDED PAGE BACKGROUND OPTIONS ---
     const BACKGROUND_COLORS = [
-      // Pastel / Light
       { name: 'Mint Green', value: 'bg-emerald-100' },
       { name: 'Classic Gray', value: 'bg-gray-100' },
       { name: 'Slate Blue', value: 'bg-slate-200' },
@@ -32,8 +31,6 @@
       { name: 'Warm Amber', value: 'bg-amber-100' },
       { name: 'Rose Pink', value: 'bg-rose-100' },
       { name: 'Lavender', value: 'bg-purple-100' },
-      
-      // Intense / Vibrant Colors
       { name: '🔥 Electric Blue', value: 'bg-blue-600' },
       { name: '🔥 Deep Indigo', value: 'bg-indigo-700' },
       { name: '🔥 Emerald Green', value: 'bg-emerald-600' },
@@ -43,24 +40,18 @@
       { name: '🔥 Royal Violet', value: 'bg-purple-700' },
       { name: '🔥 Hot Pink', value: 'bg-fuchsia-600' },
       { name: '🔥 Deep Teal', value: 'bg-teal-700' },
-      
-      // Dark / Stealth Modes
       { name: '🌙 Midnight Black', value: 'bg-gray-950' },
       { name: '🌙 Dark Gray', value: 'bg-gray-900' },
       { name: '🌙 Charcoal Blue', value: 'bg-slate-900' }
     ];
 
-    // --- EXPANDED COLUMN CONTAINER OPTIONS ---
     const COLUMN_COLORS = [
-      // Light / Soft
       { name: 'Light Gray', value: 'bg-gray-200/90 border-gray-300 text-gray-800' },
       { name: 'Pure White', value: 'bg-white/95 border-gray-300 text-gray-900 shadow-md' },
       { name: 'Soft Blue', value: 'bg-blue-50/90 border-blue-200 text-blue-900' },
       { name: 'Soft Green', value: 'bg-emerald-50/90 border-emerald-200 text-emerald-900' },
       { name: 'Soft Yellow', value: 'bg-amber-50/90 border-amber-200 text-amber-900' },
       { name: 'Soft Purple', value: 'bg-purple-50/90 border-purple-200 text-purple-900' },
-      
-      // Intense / High Contrast Colors
       { name: '🔥 Bold White (Glass)', value: 'bg-white/80 backdrop-blur-md border-white/40 text-gray-900 shadow-xl' },
       { name: '🔥 Neon Blue', value: 'bg-blue-900/90 border-blue-400 text-blue-100 shadow-lg' },
       { name: '🔥 Forest Emerald', value: 'bg-emerald-900/90 border-emerald-400 text-emerald-100 shadow-lg' },
@@ -68,14 +59,12 @@
       { name: '🔥 Intense Crimson', value: 'bg-rose-900/90 border-rose-400 text-rose-100 shadow-lg' },
       { name: '🔥 Bright Gold', value: 'bg-amber-400 border-amber-600 text-amber-950 shadow-lg' },
       { name: '🔥 Electric Cyan', value: 'bg-cyan-500 border-cyan-300 text-cyan-950 shadow-lg' },
-      
-      // Dark Modes
       { name: '🌙 Dark Slate', value: 'bg-slate-800 border-slate-700 text-slate-100' },
       { name: '🌙 Onyx Black', value: 'bg-black/90 border-gray-800 text-gray-100 shadow-xl' }
     ];
 
     const emptyTask = {
-      title: '', jira_id: '', status: 'Active Jiras', problem: '', searched: '',
+      title: '', jira_id: '', status: 'TO DO', problem: '', searched: '',
       actions: '', notes: '', related_files: '', qa: '',
       reporter_response: 'Hello _,\n\nThank you for raising this inquiry.\n\n___\n\nKind Regards'
     };
@@ -216,7 +205,6 @@
             </div>
 
             <div className="flex items-center gap-6">
-              {/* Page Theme */}
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-gray-700 uppercase">Page Theme:</span>
                 <select 
@@ -230,7 +218,6 @@
                 </select>
               </div>
 
-              {/* Column Theme */}
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-gray-700 uppercase">Columns:</span>
                 <select 
