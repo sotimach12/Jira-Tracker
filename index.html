@@ -51,7 +51,7 @@
     const COLUMN_BORDER_COLORS = {
       'To Do': 'border-black',
       'Active Jiras': 'border-amber-400',
-      'Waiting Jiras': 'border-slate-300', // Darkest off-white / silver shade
+      'Waiting Jiras': 'border-slate-300',
       'Parked/Paused Jiras': 'border-purple-600',
       'Done/Closed': 'border-lime-400'
     };
@@ -84,6 +84,7 @@
     const emptyTask = {
       title: '', jira_id: '', status: 'To Do', problem: '', searched: '',
       actions: '', notes: '', related_files: '', shelf_pages: '', qa: '',
+      is_project: false,
       reporter_response: defaultResponseTemplate
     };
 
@@ -230,6 +231,7 @@
           related_files: currentTask.related_files || '',
           shelf_pages: currentTask.shelf_pages || '',
           qa: currentTask.qa || '',
+          is_project: !!currentTask.is_project,
           reporter_response: currentTask.reporter_response || ''
         };
 
@@ -337,7 +339,13 @@
                       onClick={() => { setCurrentTask(task); setIsModalOpen(true); }}
                     >
                       <div className="flex justify-between items-center mb-2">
-                        <span className="text-xs font-bold text-blue-600 truncate max-w-[140px]">{extractJiraID(task.jira_id)}</span>
+                        <div className="flex items-center gap-1.5 truncate max-w-[150px]">
+                          {/* RED DOT FOR PROJECT TASKS */}
+                          {task.is_project && (
+                            <span className="w-2.5 h-2.5 bg-red-600 rounded-full flex-shrink-0 inline-block shadow-sm" title="Important Project"></span>
+                          )}
+                          <span className="text-xs font-bold text-blue-600 truncate">{extractJiraID(task.jira_id)}</span>
+                        </div>
                         <span className="text-[10px] text-gray-400">{formatDate(task.created_at)}</span>
                       </div>
                       <div className="font-semibold text-gray-900 line-clamp-2">{task.title || 'Untitled Task'}</div>
@@ -361,20 +369,32 @@
                   <button onClick={() => setIsModalOpen(false)} className="text-gray-500 hover:text-red-500 font-bold text-xl">✕</button>
                 </div>
                 <div className="space-y-6">
-                  <div className="flex gap-4">
+                  <div className="flex gap-4 items-center">
                     <div className="flex-1">
                       <label className="block text-sm font-bold text-gray-700 mb-1">Title</label>
                       <input type="text" className="w-full border border-gray-300 p-2 rounded" value={currentTask.title || ''} onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, title: val})); }} />
                     </div>
-                    <div className="w-1/3">
+                    <div className="w-1/4">
                       <label className="block text-sm font-bold text-gray-700 mb-1">Jira Link/ID</label>
                       <input type="text" className="w-full border border-gray-300 p-2 rounded" value={currentTask.jira_id || ''} onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, jira_id: val})); }} />
                     </div>
-                    <div className="w-1/3">
+                    <div className="w-1/4">
                       <label className="block text-sm font-bold text-gray-700 mb-1">Status</label>
                       <select className="w-full border border-gray-300 p-2 rounded" value={currentTask.status || 'To Do'} onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, status: val})); }}>
                         {COLUMNS.map(col => <option key={col} value={col}>{col}</option>)}
                       </select>
+                    </div>
+                    {/* PROJECT CHECKBOX OPTION */}
+                    <div className="flex items-center gap-2 pt-6">
+                      <label className="flex items-center gap-2 cursor-pointer font-bold text-xs text-red-600 bg-red-50 border border-red-200 px-3 py-2.5 rounded hover:bg-red-100 transition-colors">
+                        <input 
+                          type="checkbox" 
+                          className="w-4 h-4 text-red-600 rounded focus:ring-red-500 cursor-pointer" 
+                          checked={!!currentTask.is_project} 
+                          onChange={e => { const checked = e.target.checked; setCurrentTask(prev => ({...prev, is_project: checked})); }} 
+                        />
+                        <span>Project</span>
+                      </label>
                     </div>
                   </div>
 
