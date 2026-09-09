@@ -215,7 +215,6 @@
       };
 
       const saveTask = async () => {
-        // Construct payload explicitly so no missing keys get wiped out
         const payload = {
           title: currentTask.title || '',
           jira_id: currentTask.jira_id || '',
@@ -257,10 +256,10 @@
       const appendNewResponse = () => {
         const timestamp = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
         const newResponseBlock = `\n\n========================================\nRESPONSE (${timestamp})\n========================================\n${defaultResponseTemplate}`;
-        setCurrentTask({
-          ...currentTask,
-          reporter_response: (currentTask.reporter_response || '') + newResponseBlock
-        });
+        setCurrentTask(prev => ({
+          ...prev,
+          reporter_response: (prev.reporter_response || '') + newResponseBlock
+        }));
       };
 
       const promptAddLink = (fieldKey) => {
@@ -281,8 +280,7 @@
           editor.setSelection(range.index + linkText.length);
         } else {
           const formattedLink = `<p><a href="${url}" target="_blank" rel="noopener noreferrer">${linkText}</a></p>`;
-          const currentValue = currentTask[fieldKey] || '';
-          setCurrentTask({ ...currentTask, [fieldKey]: currentValue + formattedLink });
+          setCurrentTask(prev => ({ ...prev, [fieldKey]: (prev[fieldKey] || '') + formattedLink }));
         }
       };
 
@@ -380,15 +378,15 @@
                   <div className="flex gap-4">
                     <div className="flex-1">
                       <label className="block text-sm font-bold text-gray-700 mb-1">Title</label>
-                      <input type="text" className="w-full border border-gray-300 p-2 rounded" value={currentTask.title || ''} onChange={e => setCurrentTask({...currentTask, title: e.target.value})} />
+                      <input type="text" className="w-full border border-gray-300 p-2 rounded" value={currentTask.title || ''} onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, title: val})); }} />
                     </div>
                     <div className="w-1/3">
                       <label className="block text-sm font-bold text-gray-700 mb-1">Jira Link/ID</label>
-                      <input type="text" className="w-full border border-gray-300 p-2 rounded" value={currentTask.jira_id || ''} onChange={e => setCurrentTask({...currentTask, jira_id: e.target.value})} />
+                      <input type="text" className="w-full border border-gray-300 p-2 rounded" value={currentTask.jira_id || ''} onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, jira_id: val})); }} />
                     </div>
                     <div className="w-1/3">
                       <label className="block text-sm font-bold text-gray-700 mb-1">Status</label>
-                      <select className="w-full border border-gray-300 p-2 rounded" value={currentTask.status || 'To Do'} onChange={e => setCurrentTask({...currentTask, status: e.target.value})}>
+                      <select className="w-full border border-gray-300 p-2 rounded" value={currentTask.status || 'To Do'} onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, status: val})); }}>
                         {COLUMNS.map(col => <option key={col} value={col}>{col}</option>)}
                       </select>
                     </div>
@@ -396,7 +394,7 @@
 
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-1">What's The Problem Or Task</label>
-                    <RichEditor id={`editor-problem-${currentTask.id || 'new'}`} key={`problem-${currentTask.id || 'new'}`} value={currentTask.problem || ''} onChange={val => setCurrentTask({...currentTask, problem: val})} onInit={q => editorRefs.current['problem'] = q} />
+                    <RichEditor id="editor-problem" value={currentTask.problem || ''} onChange={val => setCurrentTask(prev => ({...prev, problem: val}))} onInit={q => editorRefs.current['problem'] = q} />
                   </div>
 
                   <div>
@@ -404,7 +402,7 @@
                       <label className="block text-sm font-bold text-gray-700">Where I Searched</label>
                       <button type="button" onClick={() => promptAddLink('searched')} className="text-xs font-bold text-blue-600 hover:text-blue-800">+ Add Link</button>
                     </div>
-                    <RichEditor id={`editor-searched-${currentTask.id || 'new'}`} key={`searched-${currentTask.id || 'new'}`} value={currentTask.searched || ''} onChange={val => setCurrentTask({...currentTask, searched: val})} onInit={q => editorRefs.current['searched'] = q} />
+                    <RichEditor id="editor-searched" value={currentTask.searched || ''} onChange={val => setCurrentTask(prev => ({...prev, searched: val}))} onInit={q => editorRefs.current['searched'] = q} />
                   </div>
 
                   <div>
@@ -412,7 +410,7 @@
                       <label className="block text-sm font-bold text-gray-700">Actions</label>
                       <button type="button" onClick={() => promptAddLink('actions')} className="text-xs font-bold text-blue-600 hover:text-blue-800">+ Add Link</button>
                     </div>
-                    <RichEditor id={`editor-actions-${currentTask.id || 'new'}`} key={`actions-${currentTask.id || 'new'}`} value={currentTask.actions || ''} onChange={val => setCurrentTask({...currentTask, actions: val})} onInit={q => editorRefs.current['actions'] = q} />
+                    <RichEditor id="editor-actions" value={currentTask.actions || ''} onChange={val => setCurrentTask(prev => ({...prev, actions: val}))} onInit={q => editorRefs.current['actions'] = q} />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -421,7 +419,7 @@
                         <label className="block text-sm font-bold text-gray-700">Notes</label>
                         <button type="button" onClick={() => promptAddLink('notes')} className="text-xs font-bold text-blue-600 hover:text-blue-800">+ Add Link</button>
                       </div>
-                      <RichEditor id={`editor-notes-${currentTask.id || 'new'}`} key={`notes-${currentTask.id || 'new'}`} value={currentTask.notes || ''} onChange={val => setCurrentTask({...currentTask, notes: val})} onInit={q => editorRefs.current['notes'] = q} />
+                      <RichEditor id="editor-notes" value={currentTask.notes || ''} onChange={val => setCurrentTask(prev => ({...prev, notes: val}))} onInit={q => editorRefs.current['notes'] = q} />
                     </div>
 
                     <div>
@@ -429,7 +427,7 @@
                         <label className="block text-sm font-bold text-gray-700">Related Files</label>
                         <button type="button" onClick={() => promptAddLink('related_files')} className="text-xs font-bold text-blue-600 hover:text-blue-800">+ Add Link</button>
                       </div>
-                      <RichEditor id={`editor-related-${currentTask.id || 'new'}`} key={`related-${currentTask.id || 'new'}`} value={currentTask.related_files || ''} onChange={val => setCurrentTask({...currentTask, related_files: val})} onInit={q => editorRefs.current['related_files'] = q} />
+                      <RichEditor id="editor-related" value={currentTask.related_files || ''} onChange={val => setCurrentTask(prev => ({...prev, related_files: val}))} onInit={q => editorRefs.current['related_files'] = q} />
                     </div>
                   </div>
 
@@ -438,7 +436,7 @@
                       <label className="block text-sm font-bold text-gray-700">Shelf Pages That Need Content</label>
                       <button type="button" onClick={() => promptAddLink('shelf_pages')} className="text-xs font-bold text-blue-600 hover:text-blue-800">+ Add Link</button>
                     </div>
-                    <RichEditor id={`editor-shelf-${currentTask.id || 'new'}`} key={`shelf-${currentTask.id || 'new'}`} value={currentTask.shelf_pages || ''} onChange={val => setCurrentTask({...currentTask, shelf_pages: val})} onInit={q => editorRefs.current['shelf_pages'] = q} />
+                    <RichEditor id="editor-shelf" value={currentTask.shelf_pages || ''} onChange={val => setCurrentTask(prev => ({...prev, shelf_pages: val}))} onInit={q => editorRefs.current['shelf_pages'] = q} />
                   </div>
 
                   <div>
@@ -446,7 +444,7 @@
                       <label className="block text-sm font-bold text-gray-700">Questions & Answers</label>
                       <button type="button" onClick={() => promptAddLink('qa')} className="text-xs font-bold text-blue-600 hover:text-blue-800">+ Add Link</button>
                     </div>
-                    <RichEditor id={`editor-qa-${currentTask.id || 'new'}`} key={`qa-${currentTask.id || 'new'}`} value={currentTask.qa || ''} onChange={val => setCurrentTask({...currentTask, qa: val})} onInit={q => editorRefs.current['qa'] = q} />
+                    <RichEditor id="editor-qa" value={currentTask.qa || ''} onChange={val => setCurrentTask(prev => ({...prev, qa: val}))} onInit={q => editorRefs.current['qa'] = q} />
                   </div>
 
                   <div className="bg-blue-50 p-4 border border-blue-200 rounded">
@@ -463,7 +461,7 @@
                     <textarea 
                       className="w-full border border-blue-200 p-2 rounded h-40 font-mono text-sm bg-white" 
                       value={currentTask.reporter_response || ''} 
-                      onChange={e => setCurrentTask({...currentTask, reporter_response: e.target.value})}
+                      onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, reporter_response: val})); }}
                     ></textarea>
                   </div>
                 </div>
