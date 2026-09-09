@@ -89,6 +89,7 @@
       is_project: false,
       reminder_date: '',
       reminder_note: '',
+      reminder_type: 'Reminder',
       reporter_response: ''
     };
 
@@ -209,7 +210,7 @@
       const [isLoading, setIsLoading] = useState(true);
       const [copiedId, setCopiedId] = useState(null);
       
-      const [filterStatus, setFilterStatus] = useState('ALL'); // ALL, DUE_TODAY, OVERDUE, PROJECTS_ONLY
+      const [filterStatus, setFilterStatus] = useState('ALL'); 
       const [notificationPermission, setNotificationPermission] = useState(
         typeof Notification !== 'undefined' ? Notification.permission : 'default'
       );
@@ -227,7 +228,6 @@
         fetchTemplates();
       }, []);
 
-      // Check for Desktop Notifications every 10 seconds
       useEffect(() => {
         const interval = setInterval(() => {
           checkAndTriggerNotifications();
@@ -241,7 +241,7 @@
           setNotificationPermission(perm);
           if (perm === 'granted') {
             new Notification("Jira Tracker Alerts Enabled!", {
-              body: "You will receive desktop alerts for scheduled task reminders.",
+              body: "You will receive desktop alerts for scheduled reminders & deadlines.",
               icon: "📌"
             });
           }
@@ -260,14 +260,14 @@
             if (remTime <= now) {
               const jiraId = extractJiraID(task.jira_id) || 'JIRA Task';
               const title = task.title || 'Task Reminder';
+              const rType = task.reminder_type || 'Reminder';
               const note = task.reminder_note ? `\nNote: ${task.reminder_note}` : '';
 
-              new Notification(`🔔 Reminder: ${jiraId}`, {
+              new Notification(`[${rType}] ${jiraId}`, {
                 body: `${title}${note}`,
                 icon: "📌"
               });
 
-              // Mark as notified in Supabase so it doesn't trigger again
               await supabase.from('tasks').update({ reminder_notified: true }).eq('id', task.id);
               setTasks(prev => prev.map(t => t.id === task.id ? { ...t, reminder_notified: true } : t));
             }
@@ -361,6 +361,7 @@
           is_project: !!currentTask.is_project,
           reminder_date: currentTask.reminder_date ? new Date(currentTask.reminder_date).toISOString() : null,
           reminder_note: currentTask.reminder_note || '',
+          reminder_type: currentTask.reminder_type || 'Reminder',
           reminder_notified: false,
           reporter_response: currentTask.reporter_response || ''
         };
@@ -434,11 +435,12 @@
         return 'UPCOMING';
       };
 
-      // Filter tasks based on selected dropdown filter
       const filteredTasks = tasks.filter(task => {
         if (filterStatus === 'PROJECTS_ONLY') return task.is_project;
         if (filterStatus === 'DUE_TODAY') return getReminderStatus(task.reminder_date) === 'DUE_TODAY';
         if (filterStatus === 'OVERDUE') return getReminderStatus(task.reminder_date) === 'OVERDUE';
+        if (filterStatus === 'TYPE_DUE_DATE') return task.reminder_type === 'Due Date';
+        if (filterStatus === 'TYPE_FOLLOWUP') return task.reminder_type === 'Follow-up';
         return true;
       });
 
@@ -455,7 +457,6 @@
             </div>
 
             <div className="flex items-center gap-4">
-              {/* DESKTOP NOTIFICATION TOGGLE BUTTON */}
               <button 
                 onClick={requestNotificationAccess} 
                 className={`px-3 py-2 rounded shadow font-bold text-xs flex items-center gap-1.5 transition-all ${
@@ -466,7 +467,6 @@
                 <span>🔔</span> {notificationPermission === 'granted' ? 'Alerts Active ✓' : 'Enable Desktop Alerts'}
               </button>
 
-              {/* TASK FILTER SELECTOR */}
               <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-300 rounded p-1.5 shadow-sm">
                 <span className="text-[10px] font-bold text-gray-700 uppercase tracking-wider">Filter Board:</span>
                 <select 
@@ -475,13 +475,14 @@
                   className="border border-gray-300 rounded px-2 py-0.5 text-xs bg-white font-bold focus:ring-1 focus:ring-blue-500 outline-none cursor-pointer"
                 >
                   <option value="ALL">All Tasks ({tasks.length})</option>
-                  <option value="DUE_TODAY">🔔 Due Today ({tasks.filter(t => getReminderStatus(t.reminder_date) === 'DUE_TODAY').length})</option>
+                  <option value="DUE_TODAY">📅 Due Today ({tasks.filter(t => getReminderStatus(t.reminder_date) === 'DUE_TODAY').length})</option>
                   <option value="OVERDUE">⚠️ Overdue ({tasks.filter(t => getReminderStatus(t.reminder_date) === 'OVERDUE').length})</option>
+                  <option value="TYPE_DUE_DATE">📅 Due Dates Only ({tasks.filter(t => t.reminder_type === 'Due Date').length})</option>
+                  <option value="TYPE_FOLLOWUP">📌 Follow-ups Only ({tasks.filter(t => t.reminder_type === 'Follow-up').length})</option>
                   <option value="PROJECTS_ONLY">📌 Projects Only ({tasks.filter(t => t.is_project).length})</option>
                 </select>
               </div>
 
-              {/* STACKED SELECTORS: PAGE THEME & COLUMNS */}
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[10px] font-bold text-gray-700 uppercase tracking-wider">Page Theme:</span>
@@ -510,7 +511,6 @@
                 </div>
               </div>
 
-              {/* TEMPLATES BUTTON */}
               <button 
                 onClick={() => setIsTemplateModalOpen(true)} 
                 className="bg-indigo-600 text-white px-3.5 py-2 rounded shadow hover:bg-indigo-700 font-bold transition-all text-xs flex items-center gap-1.5"
@@ -536,6 +536,7 @@
                     {columnTasks.map(task => {
                       const cardUrl = getFormattedUrl(task.jira_id);
                       const remStatus = getReminderStatus(task.reminder_date);
+                      const remType = task.reminder_type || 'Reminder';
 
                       let cardBgStyle = "bg-white border-l-4 " + (COLUMN_BORDER_COLORS[column] || 'border-blue-600');
                       if (remStatus === 'OVERDUE') {
@@ -575,22 +576,26 @@
 
                           <div className="font-semibold text-gray-900 line-clamp-2">{task.title || 'Untitled Task'}</div>
 
-                          {/* IN-APP REMINDER BADGES */}
+                          {/* IN-APP DYNAMIC BADGES */}
                           {remStatus === 'OVERDUE' && (
                             <div className="mt-2.5 text-[11px] font-bold text-red-800 bg-red-100 border border-red-300 px-2 py-1 rounded flex items-center gap-1 w-fit animate-pulse">
-                              <span>⚠️ Overdue:</span> {formatDate(task.reminder_date)}
+                              <span>⚠️ Overdue ({remType}):</span> {formatDate(task.reminder_date)}
                             </div>
                           )}
 
                           {remStatus === 'DUE_TODAY' && (
                             <div className="mt-2.5 text-[11px] font-bold text-purple-900 bg-purple-100 border border-purple-300 px-2 py-1 rounded flex items-center gap-1 w-fit">
-                              <span>🔔 Due Today:</span> {formatDate(task.reminder_date)}
+                              <span>📅 Due Today ({remType}):</span> {formatDate(task.reminder_date)}
                             </div>
                           )}
 
                           {remStatus === 'UPCOMING' && (
-                            <div className="mt-2.5 text-[11px] font-medium text-slate-700 bg-slate-100 border border-slate-300 px-2 py-0.5 rounded flex items-center gap-1 w-fit">
-                              <span>🕒 Reminder:</span> {formatDate(task.reminder_date)}
+                            <div className={`mt-2.5 text-[11px] font-bold px-2 py-0.5 rounded flex items-center gap-1 w-fit border ${
+                              remType === 'Due Date' ? 'bg-red-50 text-red-700 border-red-200' :
+                              remType === 'Follow-up' ? 'bg-teal-50 text-teal-800 border-teal-200' :
+                              'bg-slate-100 text-slate-700 border-slate-300'
+                            }`}>
+                              <span>{remType === 'Due Date' ? '📅 Due Date:' : remType === 'Follow-up' ? '📌 Follow-up:' : '🕒 Reminder:'}</span> {formatDate(task.reminder_date)}
                             </div>
                           )}
                         </div>
@@ -734,11 +739,26 @@
                     </div>
                   </div>
 
-                  {/* IN-APP REMINDER DATE & DESKTOP NOTIFICATION SETTINGS */}
+                  {/* REMINDER CATEGORY & DATE CONFIGURATION */}
                   <div className="bg-purple-50 p-4 border border-purple-200 rounded-lg space-y-3">
-                    <label className="block text-sm font-bold text-purple-900 flex items-center gap-1.5">
-                      <span>🔔</span> Scheduled Reminder & Desktop Alert
-                    </label>
+                    <div className="flex justify-between items-center">
+                      <label className="block text-sm font-bold text-purple-900 flex items-center gap-1.5">
+                        <span>🔔</span> Set Scheduled Reminder / Due Date
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-purple-900">Type:</span>
+                        <select 
+                          value={currentTask.reminder_type || 'Reminder'} 
+                          onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, reminder_type: val})); }}
+                          className="border border-purple-300 rounded px-2 py-1 text-xs bg-white font-bold text-purple-950 outline-none focus:ring-2 focus:ring-purple-500"
+                        >
+                          <option value="Reminder">🕒 Reminder</option>
+                          <option value="Due Date">📅 Due Date</option>
+                          <option value="Follow-up">📌 Follow-up</option>
+                          <option value="Other">📝 Other</option>
+                        </select>
+                      </div>
+                    </div>
                     <div className="flex gap-3">
                       <input 
                         type="datetime-local" 
@@ -749,7 +769,7 @@
                       <input 
                         type="text" 
                         className="flex-1 border border-purple-300 p-2 rounded text-xs bg-white focus:ring-2 focus:ring-purple-500 outline-none" 
-                        placeholder="Reminder note for desktop alert (e.g. Check draft response)..." 
+                        placeholder="Free-text note for desktop alert (e.g. Follow up on draft response)..." 
                         value={currentTask.reminder_note || ''} 
                         onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, reminder_note: val})); }} 
                       />
