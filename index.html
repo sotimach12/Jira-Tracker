@@ -247,7 +247,7 @@
         });
       };
 
-      // Prompt tool to add link into rich text editor directly
+      // Prompt tool to add link into rich text editor directly (no trailing space)
       const promptAddLink = (fieldKey) => {
         const linkText = prompt("Enter the display text for the link (e.g. Reference Link, Doc, Shelf):");
         if (!linkText) return;
@@ -263,8 +263,7 @@
         if (editor) {
           const range = editor.getSelection(true) || { index: editor.getLength(), length: 0 };
           editor.insertText(range.index, linkText, 'link', url);
-          editor.insertText(range.index + linkText.length, ' ');
-          editor.setSelection(range.index + linkText.length + 1);
+          editor.setSelection(range.index + linkText.length);
         } else {
           const formattedLink = `<p><a href="${url}" target="_blank" rel="noopener noreferrer">${linkText}</a></p>`;
           const currentValue = currentTask[fieldKey] || '';
