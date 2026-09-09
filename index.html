@@ -211,7 +211,6 @@
       const [copiedId, setCopiedId] = useState(null);
       
       const modalRef = useRef(null);
-      const titleInputRef = useRef(null);
 
       const [filterStatus, setFilterStatus] = useState('ALL'); 
       const [notificationPermission, setNotificationPermission] = useState(
@@ -231,17 +230,10 @@
         fetchTemplates();
       }, []);
 
-      // Scroll modal to top, focus Title input, place selection at 0, and scroll text box to start
+      // Scroll modal to top without focusing input fields
       useEffect(() => {
-        if (isModalOpen) {
-          if (modalRef.current) modalRef.current.scrollTop = 0;
-          setTimeout(() => {
-            if (titleInputRef.current) {
-              titleInputRef.current.focus();
-              titleInputRef.current.setSelectionRange(0, 0);
-              titleInputRef.current.scrollLeft = 0;
-            }
-          }, 50);
+        if (isModalOpen && modalRef.current) {
+          modalRef.current.scrollTop = 0;
         }
       }, [isModalOpen, currentTask.id]);
 
@@ -716,7 +708,6 @@
                     <div className="flex-1">
                       <label className="block text-sm font-bold text-gray-700 mb-1">Title</label>
                       <input 
-                        ref={titleInputRef}
                         type="text" 
                         className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" 
                         value={currentTask.title || ''} 
