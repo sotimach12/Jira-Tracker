@@ -512,30 +512,32 @@
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              {/* ICON-ONLY ALERT BUTTON WITH GREEN BACKGROUND WHEN ACTIVE */}
               <button 
                 onClick={requestNotificationAccess} 
-                className={`px-3 py-2 rounded shadow font-bold text-xs flex items-center gap-1.5 transition-all ${
-                  notificationPermission === 'granted' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-amber-500 text-white hover:bg-amber-600'
+                className={`p-2 rounded-lg shadow font-bold text-sm flex items-center justify-center transition-all ${
+                  notificationPermission === 'granted' ? 'bg-emerald-600 text-white shadow-emerald-600/30' : 'bg-amber-500 text-white hover:bg-amber-600'
                 }`}
-                title="Enable Browser Desktop Notifications"
+                title={notificationPermission === 'granted' ? 'Desktop Alerts Active' : 'Enable Desktop Alerts'}
               >
-                <span>🔔</span> {notificationPermission === 'granted' ? 'Alerts Active ✓' : 'Enable Desktop Alerts'}
+                🔔
               </button>
 
-              <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-300 rounded p-1.5 shadow-sm">
-                <span className="text-[10px] font-bold text-gray-700 uppercase tracking-wider">Filter Board:</span>
+              {/* COMPACT FILTER BOARD SELECTOR */}
+              <div className="flex items-center gap-1 bg-gray-50 border border-gray-300 rounded-lg p-1 shadow-sm">
+                <span className="text-[10px] font-bold text-gray-600 uppercase tracking-wider pl-1">Filter:</span>
                 <select 
                   value={filterStatus} 
                   onChange={e => setFilterStatus(e.target.value)}
-                  className="border border-gray-300 rounded px-2 py-0.5 text-xs bg-white font-bold focus:ring-1 focus:ring-blue-500 outline-none cursor-pointer"
+                  className="border border-gray-300 rounded px-1.5 py-0.5 text-[11px] bg-white font-bold focus:ring-1 focus:ring-blue-500 outline-none cursor-pointer max-w-[130px]"
                 >
-                  <option value="ALL">All Tasks ({tasks.length})</option>
-                  <option value="DUE_TODAY">📅 Due Today ({tasks.filter(t => getReminderStatus(t.reminder_date) === 'DUE_TODAY').length})</option>
+                  <option value="ALL">All ({tasks.length})</option>
+                  <option value="DUE_TODAY">📅 Today ({tasks.filter(t => getReminderStatus(t.reminder_date) === 'DUE_TODAY').length})</option>
                   <option value="OVERDUE">⚠️ Overdue ({tasks.filter(t => getReminderStatus(t.reminder_date) === 'OVERDUE').length})</option>
-                  <option value="TYPE_DUE_DATE">📅 Due Dates Only ({tasks.filter(t => t.reminder_type === 'Due Date').length})</option>
-                  <option value="TYPE_FOLLOWUP">📌 Follow-ups Only ({tasks.filter(t => t.reminder_type === 'Follow-up').length})</option>
-                  <option value="PROJECTS_ONLY">📌 Projects Only ({tasks.filter(t => t.is_project).length})</option>
+                  <option value="TYPE_DUE_DATE">📅 Due Dates ({tasks.filter(t => t.reminder_type === 'Due Date').length})</option>
+                  <option value="TYPE_FOLLOWUP">📌 Follow-ups ({tasks.filter(t => t.reminder_type === 'Follow-up').length})</option>
+                  <option value="PROJECTS_ONLY">📌 Projects ({tasks.filter(t => t.is_project).length})</option>
                 </select>
               </div>
 
