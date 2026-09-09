@@ -210,6 +210,8 @@
       const [isLoading, setIsLoading] = useState(true);
       const [copiedId, setCopiedId] = useState(null);
       
+      const modalRef = useRef(null);
+
       const [filterStatus, setFilterStatus] = useState('ALL'); 
       const [notificationPermission, setNotificationPermission] = useState(
         typeof Notification !== 'undefined' ? Notification.permission : 'default'
@@ -227,6 +229,13 @@
         fetchTasks(); 
         fetchTemplates();
       }, []);
+
+      // Scroll modal to top whenever it opens
+      useEffect(() => {
+        if (isModalOpen && modalRef.current) {
+          modalRef.current.scrollTop = 0;
+        }
+      }, [isModalOpen, currentTask.id]);
 
       useEffect(() => {
         const interval = setInterval(() => {
@@ -684,7 +693,7 @@
           {/* TASK DOCUMENT MODAL WINDOW */}
           {isModalOpen && (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-              <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
+              <div ref={modalRef} className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
                 <div className="flex justify-between items-center mb-6 border-b pb-4">
                   <div>
                     <h2 className="text-2xl font-bold text-gray-900">Document Template</h2>
