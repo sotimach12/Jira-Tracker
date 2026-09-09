@@ -45,20 +45,19 @@
       { name: 'Charcoal Blue', bgValue: 'bg-slate-900', colValue: 'bg-slate-900 border-slate-800 text-slate-100 shadow-xl' }
     ];
 
+    const defaultResponseTemplate = 'Hello _,\n\nThank You For Raising This Inquiry.\n\n___\n\nKind Regards';
+
     const emptyTask = {
       title: '', jira_id: '', status: 'To Do', problem: '', searched: '',
       actions: '', notes: '', related_files: '', qa: '',
-      reporter_response: 'Hello _,\n\nThank You For Raising This Inquiry.\n\n___\n\nKind Regards'
+      reporter_response: defaultResponseTemplate
     };
 
-    // Helper component to render HTML content safely (allows user-added links)
     function HTMLContent({ content }) {
       if (!content) return null;
-      
-      // Auto-detect plain URLs if user pasted raw link
       const urlRegex = /(https?:\/\/[^\s<]+)/g;
       let formattedContent = content.replace(urlRegex, (url) => {
-        if (url.includes('href=')) return url; // Ignore if already inside a link tag
+        if (url.includes('href=')) return url;
         return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-blue-600 underline font-semibold hover:text-blue-800 break-all">${url}</a>`;
       });
 
@@ -181,7 +180,16 @@
         }
       };
 
-      // Prompt tool to insert a hyperlink into any field
+      // Appends a new response template to the existing text box
+      const appendNewResponse = () => {
+        const timestamp = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+        const newResponseBlock = `\n\n========================================\nRESPONSE (${timestamp})\n========================================\n${defaultResponseTemplate}`;
+        setCurrentTask({
+          ...currentTask,
+          reporter_response: (currentTask.reporter_response || '') + newResponseBlock
+        });
+      };
+
       const promptAddLink = (fieldKey) => {
         const linkText = prompt("Enter the display text for the link (e.g. Jira Ticket, Doc, Reference):");
         if (!linkText) return;
@@ -365,9 +373,23 @@
                     {currentTask.qa && <HTMLContent content={currentTask.qa} />}
                   </div>
 
+                  {/* SINGLE TEXT AREA WITH MULTIPLE RESPONSES APPEND FEATURE */}
                   <div className="bg-blue-50 p-4 border border-blue-200 rounded">
-                    <label className="block text-sm font-bold text-blue-800 mb-2">Response To Reporter</label>
-                    <textarea className="w-full border border-blue-200 p-2 rounded h-32 font-mono text-sm" value={currentTask.reporter_response} onChange={e => setCurrentTask({...currentTask, reporter_response: e.target.value})}></textarea>
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="block text-sm font-bold text-blue-800">Response To Reporter</label>
+                      <button 
+                        type="button" 
+                        onClick={appendNewResponse} 
+                        className="text-xs bg-blue-600 text-white font-bold px-2.5 py-1 rounded hover:bg-blue-700 transition-all shadow-sm"
+                      >
+                        + Append Another Response
+                      </button>
+                    </div>
+                    <textarea 
+                      className="w-full border border-blue-200 p-2 rounded h-40 font-mono text-sm bg-white" 
+                      value={currentTask.reporter_response || ''} 
+                      onChange={e => setCurrentTask({...currentTask, reporter_response: e.target.value})}
+                    ></textarea>
                   </div>
                 </div>
 
