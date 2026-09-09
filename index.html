@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>The Jira Tracker</title>
+  <title>Jira Tracker</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
@@ -286,40 +286,43 @@
         <div className={`min-h-screen p-8 font-sans transition-colors duration-300 ${bgColor}`}>
           <div className="flex justify-between items-center mb-8 bg-white/90 backdrop-blur-md p-4 rounded-xl shadow-lg border border-white/20">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">The Jira Tracker</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Jira Tracker</h1>
               <button onClick={() => supabase.auth.signOut()} className="text-sm font-bold text-red-600 hover:text-red-800 mt-1">
                 Securely Log Out
               </button>
             </div>
 
             <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-gray-700 uppercase">Page Theme:</span>
-                <select 
-                  value={bgColor} 
-                  onChange={e => changeBgColor(e.target.value)}
-                  className="border border-gray-300 rounded px-2 py-1 text-sm bg-white font-medium focus:ring-2 focus:ring-blue-500 outline-none shadow-sm cursor-pointer"
-                >
-                  {UNIFIED_COLOR_OPTIONS.map(c => (
-                    <option key={c.name} value={c.bgValue}>{c.name}</option>
-                  ))}
-                </select>
+              {/* COMPACT & STACKED DROPDOWNS */}
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-bold text-gray-700 uppercase tracking-wider">Page Theme:</span>
+                  <select 
+                    value={bgColor} 
+                    onChange={e => changeBgColor(e.target.value)}
+                    className="border border-gray-300 rounded px-1.5 py-0.5 text-xs bg-white font-medium focus:ring-1 focus:ring-blue-500 outline-none shadow-sm cursor-pointer min-w-[110px]"
+                  >
+                    {UNIFIED_COLOR_OPTIONS.map(c => (
+                      <option key={c.name} value={c.bgValue}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-bold text-gray-700 uppercase tracking-wider">Columns:</span>
+                  <select 
+                    value={colColor} 
+                    onChange={e => changeColColor(e.target.value)}
+                    className="border border-gray-300 rounded px-1.5 py-0.5 text-xs bg-white font-medium focus:ring-1 focus:ring-blue-500 outline-none shadow-sm cursor-pointer min-w-[110px]"
+                  >
+                    {UNIFIED_COLOR_OPTIONS.map(c => (
+                      <option key={c.name} value={c.colValue}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-gray-700 uppercase">Columns:</span>
-                <select 
-                  value={colColor} 
-                  onChange={e => changeColColor(e.target.value)}
-                  className="border border-gray-300 rounded px-2 py-1 text-sm bg-white font-medium focus:ring-2 focus:ring-blue-500 outline-none shadow-sm cursor-pointer"
-                >
-                  {UNIFIED_COLOR_OPTIONS.map(c => (
-                    <option key={c.name} value={c.colValue}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <button onClick={() => { setCurrentTask({ ...emptyTask }); setIsModalOpen(true); }} className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 font-bold transition-all">
+              <button onClick={() => { setCurrentTask({ ...emptyTask }); setIsModalOpen(true); }} className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 font-bold transition-all text-sm">
                 + New Jira Task
               </button>
             </div>
@@ -340,7 +343,6 @@
                     >
                       <div className="flex justify-between items-center mb-2">
                         <div className="flex items-center gap-1.5 truncate max-w-[150px]">
-                          {/* RED DOT FOR PROJECT TASKS */}
                           {task.is_project && (
                             <span className="w-2.5 h-2.5 bg-red-600 rounded-full flex-shrink-0 inline-block shadow-sm" title="Important Project"></span>
                           )}
@@ -384,7 +386,6 @@
                         {COLUMNS.map(col => <option key={col} value={col}>{col}</option>)}
                       </select>
                     </div>
-                    {/* PROJECT CHECKBOX OPTION */}
                     <div className="flex items-center gap-2 pt-6">
                       <label className="flex items-center gap-2 cursor-pointer font-bold text-xs text-red-600 bg-red-50 border border-red-200 px-3 py-2.5 rounded hover:bg-red-100 transition-colors">
                         <input 
