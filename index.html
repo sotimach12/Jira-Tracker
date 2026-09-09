@@ -81,6 +81,12 @@
 
     const defaultResponseTemplate = 'Hello _,\n\nThank You For Raising This Inquiry.\n\n___\n\nKind Regards';
 
+    const INITIAL_TEMPLATES = [
+      { name: 'Standard Inquiry Response', response: 'Hello _,\n\nThank You For Raising This Inquiry.\n\n___\n\nKind Regards' },
+      { name: 'Pending Info Response', response: 'Hello _,\n\nWe Are Currently Reviewing This Case And Require Additional Details.\n\nKind Regards' },
+      { name: 'Resolution Response', response: 'Hello _,\n\nThis Inquiry Has Been Resolved And Closed.\n\nKind Regards' }
+    ];
+
     const emptyTask = {
       title: '', jira_id: '', status: 'To Do', problem: '', searched: '',
       actions: '', notes: '', related_files: '', shelf_pages: '', qa: '',
@@ -192,6 +198,11 @@
       const [currentTask, setCurrentTask] = useState(emptyTask);
       const [isLoading, setIsLoading] = useState(true);
       
+      const [customTemplates, setCustomTemplates] = useState(() => {
+        const saved = localStorage.getItem('jira_templates');
+        return saved ? JSON.parse(saved) : INITIAL_TEMPLATES;
+      });
+
       const [bgColor, setBgColor] = useState(() => {
         return localStorage.getItem('tracker_bg') || 'bg-blue-600';
       });
@@ -210,6 +221,32 @@
       const changeColColor = (colorClass) => {
         setColColor(colorClass);
         localStorage.setItem('tracker_col', colorClass);
+      };
+
+      const handleTemplateSelect = (e) => {
+        const selectedVal = e.target.value;
+        if (!selectedVal) return;
+
+        if (selectedVal === 'ADD_NEW') {
+          const tName = prompt("Enter a name for your custom template:");
+          if (!tName) return;
+          const tBody = prompt("Enter the response text template:");
+          if (!tBody) return;
+
+          const updated = [...customTemplates, { name: tName, response: tBody }];
+          setCustomTemplates(updated);
+          localStorage.setItem('jira_templates', JSON.stringify(updated));
+          return;
+        }
+
+        const templateObj = customTemplates.find(t => t.name === selectedVal);
+        if (templateObj) {
+          setCurrentTask({
+            ...emptyTask,
+            reporter_response: templateObj.response
+          });
+          setIsModalOpen(true);
+        }
       };
 
       const fetchTasks = async () => {
@@ -293,14 +330,14 @@
             </div>
 
             <div className="flex items-center gap-6">
-              {/* COMPACT & STACKED DROPDOWNS */}
+              {/* STACKED SELECTORS: PAGE THEME, COLUMNS & TEMPLATES */}
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[10px] font-bold text-gray-700 uppercase tracking-wider">Page Theme:</span>
                   <select 
                     value={bgColor} 
                     onChange={e => changeBgColor(e.target.value)}
-                    className="border border-gray-300 rounded px-1.5 py-0.5 text-xs bg-white font-medium focus:ring-1 focus:ring-blue-500 outline-none shadow-sm cursor-pointer min-w-[110px]"
+                    className="border border-gray-300 rounded px-1.5 py-0.5 text-xs bg-white font-medium focus:ring-1 focus:ring-blue-500 outline-none shadow-sm cursor-pointer min-w-[120px]"
                   >
                     {UNIFIED_COLOR_OPTIONS.map(c => (
                       <option key={c.name} value={c.bgValue}>{c.name}</option>
@@ -313,11 +350,26 @@
                   <select 
                     value={colColor} 
                     onChange={e => changeColColor(e.target.value)}
-                    className="border border-gray-300 rounded px-1.5 py-0.5 text-xs bg-white font-medium focus:ring-1 focus:ring-blue-500 outline-none shadow-sm cursor-pointer min-w-[110px]"
+                    className="border border-gray-300 rounded px-1.5 py-0.5 text-xs bg-white font-medium focus:ring-1 focus:ring-blue-500 outline-none shadow-sm cursor-pointer min-w-[120px]"
                   >
                     {UNIFIED_COLOR_OPTIONS.map(c => (
                       <option key={c.name} value={c.colValue}>{c.name}</option>
                     ))}
+                  </select>
+                </div>
+
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider">Templates:</span>
+                  <select 
+                    onChange={handleTemplateSelect}
+                    defaultValue=""
+                    className="border border-blue-300 bg-blue-50 rounded px-1.5 py-0.5 text-xs font-bold text-blue-800 focus:ring-1 focus:ring-blue-500 outline-none shadow-sm cursor-pointer min-w-[120px]"
+                  >
+                    <option value="" disabled>Select Template</option>
+                    {customTemplates.map(t => (
+                      <option key={t.name} value={t.name}>{t.name}</option>
+                    ))}
+                    <option value="ADD_NEW">+ Add Custom Template</option>
                   </select>
                 </div>
               </div>
