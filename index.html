@@ -81,11 +81,6 @@
 
     const defaultResponseTemplate = 'Hello _,\n\nThank You For Raising This Inquiry.\n\n___\n\nKind Regards';
 
-    const INITIAL_TEMPLATE_SPACES = [
-      { id: 1, title: 'Standard Inquiry Template', body: '<p>Hello _,</p><p><br></p><p>Thank You For Raising This Inquiry.</p><p>___</p><p><br></p><p>Kind Regards</p>' },
-      { id: 2, title: 'Information Required Template', body: '<p>Hello _,</p><p><br></p><p>We Are Currently Reviewing This Case And Require Additional Details:</p><ul><li></li></ul><p>Kind Regards</p>' }
-    ];
-
     const emptyTask = {
       title: '', jira_id: '', status: 'To Do', problem: '', searched: '',
       actions: '', notes: '', related_files: '', shelf_pages: '', qa: '',
@@ -193,17 +188,13 @@
 
     function WorkspaceTracker() {
       const [tasks, setTasks] = useState([]);
+      const [templateSpaces, setTemplateSpaces] = useState([]);
       const [isModalOpen, setIsModalOpen] = useState(false);
       const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
       const [currentTask, setCurrentTask] = useState(emptyTask);
       const [isLoading, setIsLoading] = useState(true);
       const [copiedId, setCopiedId] = useState(null);
       
-      const [templateSpaces, setTemplateSpaces] = useState(() => {
-        const saved = localStorage.getItem('jira_template_spaces');
-        return saved ? JSON.parse(saved) : INITIAL_TEMPLATE_SPACES;
-      });
-
       const [bgColor, setBgColor] = useState(() => {
         return localStorage.getItem('tracker_bg') || 'bg-blue-600';
       });
@@ -212,7 +203,10 @@
         return localStorage.getItem('tracker_col') || UNIFIED_COLOR_OPTIONS[1].colValue;
       });
 
-      useEffect(() => { fetchTasks(); }, []);
+      useEffect(() => { 
+        fetchTasks(); 
+        fetchTemplates();
+      }, []);
 
       const changeBgColor = (colorClass) => {
         setBgColor(colorClass);
@@ -224,40 +218,38 @@
         localStorage.setItem('tracker_col', colorClass);
       };
 
-      const saveTemplatesToStorage = (newSpaces) => {
-        setTemplateSpaces(newSpaces);
-        localStorage.setItem('jira_template_spaces', JSON.stringify(newSpaces));
-      };
-
-      const addTemplateSpace = () => {
-        const newSpace = {
-          id: Date.now(),
-          title: `New Template #${templateSpaces.length + 1}`,
-          body: defaultResponseTemplate
-        };
-        saveTemplatesToStorage([...templateSpaces, newSpace]);
-      };
-
-      const updateTemplateSpace = (id, field, value) => {
-        const updated = templateSpaces.map(space => space.id === id ? { ...space, [field]: value } : space);
-        saveTemplatesToStorage(updated);
-      };
-
-      const removeTemplateSpace = (id) => {
-        if (window.confirm("Are you sure you want to remove this template space?")) {
-          const updated = templateSpaces.filter(space => space.id !== id);
-          saveTemplatesToStorage(updated);
+      const fetchTemplates = async () => {
+        const { data, error } = await supabase.from('templates').select('*').order('created_at', { ascending: true });
+        if (!error && data) {
+          setTemplateSpaces(data);
         }
       };
 
-      // Copy text and pasted rich HTML/Images to clipboard
+      const addTemplateSpace = async () => {
+        const newTemp = { title: 'New Template', body: defaultResponseTemplate };
+        const { data, error } = await supabase.from('templates').insert([newTemp]).select();
+        if (!error && data) {
+          setTemplateSpaces(prev => [...prev, data[0]]);
+        }
+      };
+
+      const updateTemplateSpace = async (id, field, value) => {
+        setTemplateSpaces(prev => prev.map(s => s.id === id ? { ...s, [field]: value } : s));
+        await supabase.from('templates').update({ [field]: value }).eq('id', id);
+      };
+
+      const removeTemplateSpace = async (id) => {
+        if (window.confirm("Are you sure you want to delete this template from Supabase?")) {
+          setTemplateSpaces(prev => prev.filter(s => s.id !== id));
+          await supabase.from('templates').delete().eq('id', id);
+        }
+      };
+
       const copyTemplateText = async (space) => {
         const htmlContent = space.body || '';
         try {
           if (navigator.clipboard && window.ClipboardItem) {
             const blobHtml = new Blob([htmlContent], { type: 'text/html' });
-            
-            // Plain text fallback strip
             const tmp = document.createElement('div');
             tmp.innerHTML = htmlContent;
             const plainText = tmp.textContent || tmp.innerText || '';
@@ -441,19 +433,19 @@
                 <div className="flex justify-between items-center border-b pb-3">
                   <div>
                     <h2 className="text-2xl font-bold text-gray-900">Saved Template Spaces</h2>
-                    <p className="text-xs text-gray-500 mt-1">Paste images (Ctrl+V) directly into template spaces and copy text & images instantly.</p>
+                    <p className="text-xs text-gray-500 mt-1">Saved directly in your Supabase database. Paste images (Ctrl+V) & copy content instantly.</p>
                   </div>
                   <button onClick={() => setIsTemplateModalOpen(false)} className="text-gray-500 hover:text-red-500 font-bold text-xl">✕</button>
                 </div>
 
                 <div className="space-y-6 max-h-[55vh] overflow-y-auto pr-2">
-                  {templateSpaces.map((space, index) => (
-                    <div key={space.id || index} className="bg-gray-50 p-4 border border-gray-200 rounded-lg space-y-3 relative shadow-sm">
+                  {templateSpaces.map((space) => (
+                    <div key={space.id} className="bg-gray-50 p-4 border border-gray-200 rounded-lg space-y-3 relative shadow-sm">
                       <div className="flex justify-between items-center gap-4">
                         <input 
                           type="text" 
                           className="font-bold text-gray-800 bg-white border border-gray-300 rounded px-2.5 py-1 text-sm flex-1 focus:ring-2 focus:ring-blue-500 outline-none" 
-                          value={space.title} 
+                          value={space.title || ''} 
                           onChange={e => updateTemplateSpace(space.id, 'title', e.target.value)} 
                           placeholder="Template Title" 
                         />
@@ -478,7 +470,7 @@
                         </div>
                       </div>
                       
-                      {/* RICH EDITOR FOR EACH TEMPLATE SPACE */}
+                      {/* RICH EDITOR FOR TEMPLATE */}
                       <div>
                         <RichEditor 
                           id={`template-editor-${space.id}`} 
