@@ -15,7 +15,6 @@
   <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
   
   <style>
-    /* Formatting Quill toolbars to fit template fields neatly */
     .ql-toolbar.ql-snow {
       border-top-left-radius: 0.375rem;
       border-top-right-radius: 0.375rem;
@@ -31,7 +30,7 @@
       background-color: #ffffff;
     }
     .ql-editor {
-      min-height: 80px;
+      min-height: 90px;
       font-size: 0.875rem;
     }
   </style>
@@ -79,8 +78,8 @@
       reporter_response: defaultResponseTemplate
     };
 
-    // Rich Text Editor Component using Quill
-    function RichEditor({ value, onChange, placeholder }) {
+    // Isolated Quill Editor with dedicated toolbar mapping
+    function RichEditor({ id, value, onChange }) {
       const editorRef = useRef(null);
       const quillRef = useRef(null);
 
@@ -88,7 +87,6 @@
         if (editorRef.current && !quillRef.current) {
           quillRef.current = new window.Quill(editorRef.current, {
             theme: 'snow',
-            placeholder: placeholder || '',
             modules: {
               toolbar: [
                 [{ 'header': [1, 2, 3, false] }],
@@ -112,7 +110,11 @@
         }
       }, []);
 
-      return <div ref={editorRef} />;
+      return (
+        <div className="w-full">
+          <div ref={editorRef} id={id} />
+        </div>
+      );
     }
 
     function extractJiraID(input) {
@@ -331,7 +333,7 @@
                   </div>
                   <button onClick={() => setIsModalOpen(false)} className="text-gray-500 hover:text-red-500 font-bold text-xl">✕</button>
                 </div>
-                <div className="space-y-5">
+                <div className="space-y-6">
                   <div className="flex gap-4">
                     <div className="flex-1">
                       <label className="block text-sm font-bold text-gray-700 mb-1">Title</label>
@@ -351,40 +353,40 @@
 
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-1">What's The Problem Or Task</label>
-                    <RichEditor key={`problem-${currentTask.id || 'new'}`} value={currentTask.problem} onChange={val => setCurrentTask({...currentTask, problem: val})} />
+                    <RichEditor id={`editor-problem-${currentTask.id || 'new'}`} key={`problem-${currentTask.id || 'new'}`} value={currentTask.problem} onChange={val => setCurrentTask({...currentTask, problem: val})} />
                   </div>
 
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-1">Where I Searched</label>
-                    <RichEditor key={`searched-${currentTask.id || 'new'}`} value={currentTask.searched} onChange={val => setCurrentTask({...currentTask, searched: val})} />
+                    <RichEditor id={`editor-searched-${currentTask.id || 'new'}`} key={`searched-${currentTask.id || 'new'}`} value={currentTask.searched} onChange={val => setCurrentTask({...currentTask, searched: val})} />
                   </div>
 
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-1">Actions</label>
-                    <RichEditor key={`actions-${currentTask.id || 'new'}`} value={currentTask.actions} onChange={val => setCurrentTask({...currentTask, actions: val})} />
+                    <RichEditor id={`editor-actions-${currentTask.id || 'new'}`} key={`actions-${currentTask.id || 'new'}`} value={currentTask.actions} onChange={val => setCurrentTask({...currentTask, actions: val})} />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-bold text-gray-700 mb-1">Notes</label>
-                      <RichEditor key={`notes-${currentTask.id || 'new'}`} value={currentTask.notes} onChange={val => setCurrentTask({...currentTask, notes: val})} />
+                      <RichEditor id={`editor-notes-${currentTask.id || 'new'}`} key={`notes-${currentTask.id || 'new'}`} value={currentTask.notes} onChange={val => setCurrentTask({...currentTask, notes: val})} />
                     </div>
 
                     <div>
                       <label className="block text-sm font-bold text-gray-700 mb-1">Related Files</label>
-                      <RichEditor key={`related-${currentTask.id || 'new'}`} value={currentTask.related_files} onChange={val => setCurrentTask({...currentTask, related_files: val})} />
+                      <RichEditor id={`editor-related-${currentTask.id || 'new'}`} key={`related-${currentTask.id || 'new'}`} value={currentTask.related_files} onChange={val => setCurrentTask({...currentTask, related_files: val})} />
                     </div>
                   </div>
 
-                  {/* NEW SECTION: SHELF PAGES */}
+                  {/* INDEPENDENT SHELF PAGES SECTION */}
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Shelf Pages</label>
-                    <RichEditor key={`shelf-${currentTask.id || 'new'}`} value={currentTask.shelf_pages} onChange={val => setCurrentTask({...currentTask, shelf_pages: val})} placeholder="Enter Shelf pages, references, or links here..." />
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Shelf Pages That Need Content</label>
+                    <RichEditor id={`editor-shelf-${currentTask.id || 'new'}`} key={`shelf-${currentTask.id || 'new'}`} value={currentTask.shelf_pages} onChange={val => setCurrentTask({...currentTask, shelf_pages: val})} />
                   </div>
 
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-1">Questions & Answers</label>
-                    <RichEditor key={`qa-${currentTask.id || 'new'}`} value={currentTask.qa} onChange={val => setCurrentTask({...currentTask, qa: val})} />
+                    <RichEditor id={`editor-qa-${currentTask.id || 'new'}`} key={`qa-${currentTask.id || 'new'}`} value={currentTask.qa} onChange={val => setCurrentTask({...currentTask, qa: val})} />
                   </div>
 
                   <div className="bg-blue-50 p-4 border border-blue-200 rounded">
