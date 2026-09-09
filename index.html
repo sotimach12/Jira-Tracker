@@ -231,12 +231,15 @@
         fetchTemplates();
       }, []);
 
-      // Scroll modal to top & place cursor inside Title field on open
+      // Scroll modal to top & place cursor at the FIRST letter of Title field on open
       useEffect(() => {
         if (isModalOpen) {
           if (modalRef.current) modalRef.current.scrollTop = 0;
           setTimeout(() => {
-            if (titleInputRef.current) titleInputRef.current.focus();
+            if (titleInputRef.current) {
+              titleInputRef.current.focus();
+              titleInputRef.current.setSelectionRange(0, 0);
+            }
           }, 50);
         }
       }, [isModalOpen, currentTask.id]);
