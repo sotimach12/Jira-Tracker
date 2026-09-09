@@ -47,6 +47,15 @@
 
     const COLUMNS = ['To Do', 'Active Jiras', 'Waiting Jiras', 'Parked/Paused Jiras', 'Done/Closed'];
     
+    // Column Border Colors
+    const COLUMN_BORDER_COLORS = {
+      'To Do': 'border-black',
+      'Active Jiras': 'border-amber-400',
+      'Waiting Jiras': 'border-white',
+      'Parked/Paused Jiras': 'border-purple-600',
+      'Done/Closed': 'border-lime-400'
+    };
+
     const UNIFIED_COLOR_OPTIONS = [
       { name: 'Mint Green', bgValue: 'bg-emerald-100', colValue: 'bg-emerald-100 border-emerald-300 text-emerald-950' },
       { name: 'Classic Gray', bgValue: 'bg-gray-100', colValue: 'bg-gray-200/90 border-gray-300 text-gray-800' },
@@ -322,7 +331,11 @@
                 </h2>
                 <div className="space-y-4">
                   {tasks.filter(t => t.status === column).map(task => (
-                    <div key={task.id} className="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-lg border-l-4 border-blue-600 transition-all transform hover:-translate-y-0.5" onClick={() => { setCurrentTask(task); setIsModalOpen(true); }}>
+                    <div 
+                      key={task.id} 
+                      className={`bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-lg border-l-4 ${COLUMN_BORDER_COLORS[column] || 'border-blue-600'} transition-all transform hover:-translate-y-0.5`} 
+                      onClick={() => { setCurrentTask(task); setIsModalOpen(true); }}
+                    >
                       <div className="flex justify-between items-center mb-2">
                         <span className="text-xs font-bold text-blue-600 truncate max-w-[140px]">{extractJiraID(task.jira_id)}</span>
                         <span className="text-[10px] text-gray-400">{formatDate(task.created_at)}</span>
