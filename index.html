@@ -230,10 +230,15 @@
         fetchTemplates();
       }, []);
 
-      // Scroll modal to top without focusing input fields
+      // Scroll modal to top & blur active element so no cursor appears anywhere on open
       useEffect(() => {
-        if (isModalOpen && modalRef.current) {
-          modalRef.current.scrollTop = 0;
+        if (isModalOpen) {
+          if (modalRef.current) modalRef.current.scrollTop = 0;
+          setTimeout(() => {
+            if (document.activeElement && typeof document.activeElement.blur === 'function') {
+              document.activeElement.blur();
+            }
+          }, 50);
         }
       }, [isModalOpen, currentTask.id]);
 
