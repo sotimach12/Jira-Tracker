@@ -9,12 +9,38 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Quill.js Rich Text Editor CSS & JS -->
+  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+  <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+  
+  <style>
+    /* Formatting Quill toolbars to fit template fields neatly */
+    .ql-toolbar.ql-snow {
+      border-top-left-radius: 0.375rem;
+      border-top-right-radius: 0.375rem;
+      background-color: #f9fafb;
+      border-color: #d1d5db;
+      padding: 4px 8px;
+    }
+    .ql-container.ql-snow {
+      border-bottom-left-radius: 0.375rem;
+      border-bottom-right-radius: 0.375rem;
+      border-color: #d1d5db;
+      font-family: inherit;
+      background-color: #ffffff;
+    }
+    .ql-editor {
+      min-height: 80px;
+      font-size: 0.875rem;
+    }
+  </style>
 </head>
 <body class="bg-gray-100">
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect } = React;
+    const { useState, useEffect, useRef } = React;
 
     const SUPABASE_URL = 'https://sjxyivhamzcmgflrraws.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_Va3ZUBZzd02bDXB_3JbRLw_PgndY5gO';
@@ -49,53 +75,44 @@
 
     const emptyTask = {
       title: '', jira_id: '', status: 'To Do', problem: '', searched: '',
-      actions: '', notes: '', related_files: '', qa: '',
+      actions: '', notes: '', related_files: '', shelf_pages: '', qa: '',
       reporter_response: defaultResponseTemplate
     };
 
-    // Clean Link Renderer (Parses both [Display Text](URL) and raw http/https links)
-    function RenderLinks({ content }) {
-      if (!content) return null;
+    // Rich Text Editor Component using Quill
+    function RichEditor({ value, onChange, placeholder }) {
+      const editorRef = useRef(null);
+      const quillRef = useRef(null);
 
-      // Clean up any old broken HTML tags if present
-      let cleanContent = content.replace(/<a [^>]*href="([^"]+)"[^>]*>(.*?)<\/a>/gi, '[$2]($1)');
-      cleanContent = cleanContent.replace(/target="_blank"[^>]*/gi, '');
+      useEffect(() => {
+        if (editorRef.current && !quillRef.current) {
+          quillRef.current = new window.Quill(editorRef.current, {
+            theme: 'snow',
+            placeholder: placeholder || '',
+            modules: {
+              toolbar: [
+                [{ 'header': [1, 2, 3, false] }],
+                ['bold', 'italic', 'underline', 'strike'],
+                [{ 'color': [] }, { 'background': [] }],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                [{ 'align': [] }],
+                ['link', 'clean']
+              ]
+            }
+          });
 
-      // Regex for [Text](URL) or raw URLs
-      const tokenRegex = /(\[[^\]]+\]\(https?:\/\/[^\)]+\)|https?:\/\/[^\s<]+)/g;
-      const lines = cleanContent.split('\n');
+          if (value) {
+            quillRef.current.clipboard.dangerouslyPasteHTML(value);
+          }
 
-      return (
-        <div className="text-xs bg-gray-50 p-2 rounded border mt-1 space-y-1 text-gray-800 break-words">
-          {lines.map((line, lineIdx) => {
-            const parts = line.split(tokenRegex);
-            return (
-              <div key={lineIdx}>
-                {parts.map((part, i) => {
-                  // Check for [Text](URL) format
-                  const mdMatch = part.match(/^\[([^\]]+)\]\((https?:\/\/[^\)]+)\)$/);
-                  if (mdMatch) {
-                    return (
-                      <a key={i} href={mdMatch[2]} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline font-semibold hover:text-blue-800">
-                        {mdMatch[1]}
-                      </a>
-                    );
-                  }
-                  // Check for raw URL
-                  if (part.match(/^https?:\/\/[^\s<]+$/)) {
-                    return (
-                      <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline font-semibold hover:text-blue-800">
-                        {part}
-                      </a>
-                    );
-                  }
-                  return part;
-                })}
-              </div>
-            );
-          })}
-        </div>
-      );
+          quillRef.current.on('text-change', () => {
+            const html = quillRef.current.root.innerHTML;
+            onChange(html === '<p><br></p>' ? '' : html);
+          });
+        }
+      }, []);
+
+      return <div ref={editorRef} />;
     }
 
     function extractJiraID(input) {
@@ -224,25 +241,6 @@
         });
       };
 
-      // Prompt to insert clean markdown link format: [Text](URL)
-      const promptAddLink = (fieldKey) => {
-        const linkText = prompt("Enter the display text for the link (e.g. Reference Link, Doc, Shelf):");
-        if (!linkText) return;
-        
-        let url = prompt("Enter the full web URL:");
-        if (!url) return;
-        
-        if (!url.startsWith('http://') && !url.startsWith('https://')) {
-          url = 'https://' + url;
-        }
-
-        const formattedLink = `[${linkText}](${url})`;
-        const currentValue = currentTask[fieldKey] || '';
-        const newValue = currentValue ? `${currentValue}\n${formattedLink}` : formattedLink;
-        
-        setCurrentTask({ ...currentTask, [fieldKey]: newValue });
-      };
-
       const formatDate = (isoString) => {
         if (!isoString) return '';
         return new Date(isoString).toLocaleString('en-US', {
@@ -323,7 +321,7 @@
 
           {isModalOpen && (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-              <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
+              <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
                 <div className="flex justify-between items-center mb-6 border-b pb-4">
                   <div>
                     <h2 className="text-2xl font-bold text-gray-900">Document Template</h2>
@@ -333,7 +331,7 @@
                   </div>
                   <button onClick={() => setIsModalOpen(false)} className="text-gray-500 hover:text-red-500 font-bold text-xl">✕</button>
                 </div>
-                <div className="space-y-4">
+                <div className="space-y-5">
                   <div className="flex gap-4">
                     <div className="flex-1">
                       <label className="block text-sm font-bold text-gray-700 mb-1">Title</label>
@@ -342,11 +340,6 @@
                     <div className="w-1/3">
                       <label className="block text-sm font-bold text-gray-700 mb-1">Jira Link/ID</label>
                       <input type="text" className="w-full border border-gray-300 p-2 rounded" value={currentTask.jira_id} onChange={e => setCurrentTask({...currentTask, jira_id: e.target.value})} />
-                      {currentTask.jira_id && (
-                        <div className="mt-1">
-                          <RenderLinks content={currentTask.jira_id.startsWith('http') ? currentTask.jira_id : `https://${currentTask.jira_id}`} />
-                        </div>
-                      )}
                     </div>
                     <div className="w-1/3">
                       <label className="block text-sm font-bold text-gray-700 mb-1">Status</label>
@@ -358,54 +351,40 @@
 
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-1">What's The Problem Or Task</label>
-                    <textarea className="w-full border border-gray-300 p-2 rounded h-24" value={currentTask.problem} onChange={e => setCurrentTask({...currentTask, problem: e.target.value})}></textarea>
+                    <RichEditor key={`problem-${currentTask.id || 'new'}`} value={currentTask.problem} onChange={val => setCurrentTask({...currentTask, problem: val})} />
                   </div>
 
                   <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <label className="block text-sm font-bold text-gray-700">Where I Searched</label>
-                      <button type="button" onClick={() => promptAddLink('searched')} className="text-xs font-bold text-blue-600 hover:text-blue-800">+ Add Link</button>
-                    </div>
-                    <textarea className="w-full border border-gray-300 p-2 rounded h-16" value={currentTask.searched} onChange={e => setCurrentTask({...currentTask, searched: e.target.value})}></textarea>
-                    {currentTask.searched && <RenderLinks content={currentTask.searched} />}
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Where I Searched</label>
+                    <RichEditor key={`searched-${currentTask.id || 'new'}`} value={currentTask.searched} onChange={val => setCurrentTask({...currentTask, searched: val})} />
                   </div>
 
                   <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <label className="block text-sm font-bold text-gray-700">Actions</label>
-                      <button type="button" onClick={() => promptAddLink('actions')} className="text-xs font-bold text-blue-600 hover:text-blue-800">+ Add Link</button>
-                    </div>
-                    <textarea className="w-full border border-gray-300 p-2 rounded h-24" value={currentTask.actions} onChange={e => setCurrentTask({...currentTask, actions: e.target.value})}></textarea>
-                    {currentTask.actions && <RenderLinks content={currentTask.actions} />}
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Actions</label>
+                    <RichEditor key={`actions-${currentTask.id || 'new'}`} value={currentTask.actions} onChange={val => setCurrentTask({...currentTask, actions: val})} />
                   </div>
 
-                  <div className="flex gap-4">
-                    <div className="flex-1">
-                      <div className="flex justify-between items-center mb-1">
-                        <label className="block text-sm font-bold text-gray-700">Notes</label>
-                        <button type="button" onClick={() => promptAddLink('notes')} className="text-xs font-bold text-blue-600 hover:text-blue-800">+ Add Link</button>
-                      </div>
-                      <textarea className="w-full border border-gray-300 p-2 rounded h-24" value={currentTask.notes} onChange={e => setCurrentTask({...currentTask, notes: e.target.value})}></textarea>
-                      {currentTask.notes && <RenderLinks content={currentTask.notes} />}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Notes</label>
+                      <RichEditor key={`notes-${currentTask.id || 'new'}`} value={currentTask.notes} onChange={val => setCurrentTask({...currentTask, notes: val})} />
                     </div>
 
-                    <div className="flex-1">
-                      <div className="flex justify-between items-center mb-1">
-                        <label className="block text-sm font-bold text-gray-700">Related Files</label>
-                        <button type="button" onClick={() => promptAddLink('related_files')} className="text-xs font-bold text-blue-600 hover:text-blue-800">+ Add Link</button>
-                      </div>
-                      <textarea className="w-full border border-gray-300 p-2 rounded h-24" value={currentTask.related_files} onChange={e => setCurrentTask({...currentTask, related_files: e.target.value})}></textarea>
-                      {currentTask.related_files && <RenderLinks content={currentTask.related_files} />}
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Related Files</label>
+                      <RichEditor key={`related-${currentTask.id || 'new'}`} value={currentTask.related_files} onChange={val => setCurrentTask({...currentTask, related_files: val})} />
                     </div>
+                  </div>
+
+                  {/* NEW SECTION: SHELF PAGES */}
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Shelf Pages</label>
+                    <RichEditor key={`shelf-${currentTask.id || 'new'}`} value={currentTask.shelf_pages} onChange={val => setCurrentTask({...currentTask, shelf_pages: val})} placeholder="Enter Shelf pages, references, or links here..." />
                   </div>
 
                   <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <label className="block text-sm font-bold text-gray-700">Questions & Answers</label>
-                      <button type="button" onClick={() => promptAddLink('qa')} className="text-xs font-bold text-blue-600 hover:text-blue-800">+ Add Link</button>
-                    </div>
-                    <textarea className="w-full border border-gray-300 p-2 rounded h-24" value={currentTask.qa} onChange={e => setCurrentTask({...currentTask, qa: e.target.value})}></textarea>
-                    {currentTask.qa && <RenderLinks content={currentTask.qa} />}
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Questions & Answers</label>
+                    <RichEditor key={`qa-${currentTask.id || 'new'}`} value={currentTask.qa} onChange={val => setCurrentTask({...currentTask, qa: val})} />
                   </div>
 
                   <div className="bg-blue-50 p-4 border border-blue-200 rounded">
