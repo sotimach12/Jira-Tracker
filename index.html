@@ -231,7 +231,7 @@
         fetchTemplates();
       }, []);
 
-      // Scroll modal to top & place cursor at the FIRST letter of Title field on open
+      // Scroll modal to top, focus Title input, place selection at 0, and scroll text box to start
       useEffect(() => {
         if (isModalOpen) {
           if (modalRef.current) modalRef.current.scrollTop = 0;
@@ -239,6 +239,7 @@
             if (titleInputRef.current) {
               titleInputRef.current.focus();
               titleInputRef.current.setSelectionRange(0, 0);
+              titleInputRef.current.scrollLeft = 0;
             }
           }, 50);
         }
