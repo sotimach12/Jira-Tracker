@@ -299,6 +299,15 @@
         localStorage.setItem('tracker_col', colorClass);
       };
 
+      const clearReminder = () => {
+        setCurrentTask(prev => ({
+          ...prev,
+          reminder_date: null,
+          reminder_note: '',
+          reminder_type: 'Reminder'
+        }));
+      };
+
       const fetchTemplates = async () => {
         const { data, error } = await supabase.from('templates').select('*').order('created_at', { ascending: true });
         if (!error && data) {
@@ -758,24 +767,36 @@
                     </div>
                   </div>
 
-                  {/* REMINDER CATEGORY & DATE CONFIGURATION */}
+                  {/* REMINDER CATEGORY, DATE CONFIGURATION & CLEAR BUTTON */}
                   <div className="bg-purple-50 p-4 border border-purple-200 rounded-lg space-y-3">
                     <div className="flex justify-between items-center">
                       <label className="block text-sm font-bold text-purple-900 flex items-center gap-1.5">
                         <span>🔔</span> Set Scheduled Reminder / Due Date
                       </label>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-purple-900">Type:</span>
-                        <select 
-                          value={currentTask.reminder_type || 'Reminder'} 
-                          onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, reminder_type: val})); }}
-                          className="border border-purple-300 rounded px-2 py-1 text-xs bg-white font-bold text-purple-950 outline-none focus:ring-2 focus:ring-purple-500"
-                        >
-                          <option value="Reminder">🕒 Reminder</option>
-                          <option value="Due Date">📅 Due Date</option>
-                          <option value="Follow-up">📌 Follow-up</option>
-                          <option value="Other">📝 Other</option>
-                        </select>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-purple-900">Type:</span>
+                          <select 
+                            value={currentTask.reminder_type || 'Reminder'} 
+                            onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, reminder_type: val})); }}
+                            className="border border-purple-300 rounded px-2 py-1 text-xs bg-white font-bold text-purple-950 outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer"
+                          >
+                            <option value="Reminder">🕒 Reminder</option>
+                            <option value="Due Date">📅 Due Date</option>
+                            <option value="Follow-up">📌 Follow-up</option>
+                            <option value="Other">📝 Other</option>
+                          </select>
+                        </div>
+                        {currentTask.reminder_date && (
+                          <button 
+                            type="button" 
+                            onClick={clearReminder} 
+                            className="text-xs font-bold text-red-600 bg-red-100 hover:bg-red-200 border border-red-200 px-2.5 py-1 rounded transition-all shadow-sm flex items-center gap-1"
+                            title="Remove date & reminder"
+                          >
+                            <span>🗑️</span> Remove Reminder
+                          </button>
+                        )}
                       </div>
                     </div>
                     <div className="flex gap-3">
