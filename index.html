@@ -78,8 +78,7 @@
       reporter_response: defaultResponseTemplate
     };
 
-    // Isolated Quill Editor with dedicated toolbar mapping
-    function RichEditor({ id, value, onChange }) {
+    function RichEditor({ id, value, onChange, onInit }) {
       const editorRef = useRef(null);
       const quillRef = useRef(null);
 
@@ -107,6 +106,10 @@
             const html = quillRef.current.root.innerHTML;
             onChange(html === '<p><br></p>' ? '' : html);
           });
+
+          if (onInit) {
+            onInit(quillRef.current);
+          }
         }
       }, []);
 
@@ -182,6 +185,7 @@
       const [isModalOpen, setIsModalOpen] = useState(false);
       const [currentTask, setCurrentTask] = useState(emptyTask);
       const [isLoading, setIsLoading] = useState(true);
+      const editorRefs = useRef({});
       
       const [bgColor, setBgColor] = useState(() => {
         return localStorage.getItem('tracker_bg') || 'bg-blue-600';
@@ -211,11 +215,27 @@
       };
 
       const saveTask = async () => {
+        // Construct payload explicitly so no missing keys get wiped out
+        const payload = {
+          title: currentTask.title || '',
+          jira_id: currentTask.jira_id || '',
+          status: currentTask.status || 'To Do',
+          problem: currentTask.problem || '',
+          searched: currentTask.searched || '',
+          actions: currentTask.actions || '',
+          notes: currentTask.notes || '',
+          related_files: currentTask.related_files || '',
+          shelf_pages: currentTask.shelf_pages || '',
+          qa: currentTask.qa || '',
+          reporter_response: currentTask.reporter_response || ''
+        };
+
         if (currentTask.id) {
-          const { created_at, ...updateData } = currentTask;
-          await supabase.from('tasks').update(updateData).eq('id', currentTask.id);
+          const { error } = await supabase.from('tasks').update(payload).eq('id', currentTask.id);
+          if (error) alert("Save Failed: " + error.message);
         } else {
-          await supabase.from('tasks').insert([currentTask]);
+          const { error } = await supabase.from('tasks').insert([payload]);
+          if (error) alert("Save Failed: " + error.message);
         }
         await fetchTasks();
         setIsModalOpen(false);
@@ -241,6 +261,29 @@
           ...currentTask,
           reporter_response: (currentTask.reporter_response || '') + newResponseBlock
         });
+      };
+
+      const promptAddLink = (fieldKey) => {
+        const linkText = prompt("Enter the display text for the link (e.g. Reference Link, Doc, Shelf):");
+        if (!linkText) return;
+        
+        let url = prompt("Enter the full web URL (e.g. https://google.com):");
+        if (!url) return;
+        
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+          url = 'https://' + url;
+        }
+
+        const editor = editorRefs.current[fieldKey];
+        if (editor) {
+          const range = editor.getSelection(true) || { index: editor.getLength(), length: 0 };
+          editor.insertText(range.index, linkText, 'link', url);
+          editor.setSelection(range.index + linkText.length);
+        } else {
+          const formattedLink = `<p><a href="${url}" target="_blank" rel="noopener noreferrer">${linkText}</a></p>`;
+          const currentValue = currentTask[fieldKey] || '';
+          setCurrentTask({ ...currentTask, [fieldKey]: currentValue + formattedLink });
+        }
       };
 
       const formatDate = (isoString) => {
@@ -337,15 +380,15 @@
                   <div className="flex gap-4">
                     <div className="flex-1">
                       <label className="block text-sm font-bold text-gray-700 mb-1">Title</label>
-                      <input type="text" className="w-full border border-gray-300 p-2 rounded" value={currentTask.title} onChange={e => setCurrentTask({...currentTask, title: e.target.value})} />
+                      <input type="text" className="w-full border border-gray-300 p-2 rounded" value={currentTask.title || ''} onChange={e => setCurrentTask({...currentTask, title: e.target.value})} />
                     </div>
                     <div className="w-1/3">
                       <label className="block text-sm font-bold text-gray-700 mb-1">Jira Link/ID</label>
-                      <input type="text" className="w-full border border-gray-300 p-2 rounded" value={currentTask.jira_id} onChange={e => setCurrentTask({...currentTask, jira_id: e.target.value})} />
+                      <input type="text" className="w-full border border-gray-300 p-2 rounded" value={currentTask.jira_id || ''} onChange={e => setCurrentTask({...currentTask, jira_id: e.target.value})} />
                     </div>
                     <div className="w-1/3">
                       <label className="block text-sm font-bold text-gray-700 mb-1">Status</label>
-                      <select className="w-full border border-gray-300 p-2 rounded" value={currentTask.status} onChange={e => setCurrentTask({...currentTask, status: e.target.value})}>
+                      <select className="w-full border border-gray-300 p-2 rounded" value={currentTask.status || 'To Do'} onChange={e => setCurrentTask({...currentTask, status: e.target.value})}>
                         {COLUMNS.map(col => <option key={col} value={col}>{col}</option>)}
                       </select>
                     </div>
@@ -353,40 +396,57 @@
 
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-1">What's The Problem Or Task</label>
-                    <RichEditor id={`editor-problem-${currentTask.id || 'new'}`} key={`problem-${currentTask.id || 'new'}`} value={currentTask.problem} onChange={val => setCurrentTask({...currentTask, problem: val})} />
+                    <RichEditor id={`editor-problem-${currentTask.id || 'new'}`} key={`problem-${currentTask.id || 'new'}`} value={currentTask.problem || ''} onChange={val => setCurrentTask({...currentTask, problem: val})} onInit={q => editorRefs.current['problem'] = q} />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Where I Searched</label>
-                    <RichEditor id={`editor-searched-${currentTask.id || 'new'}`} key={`searched-${currentTask.id || 'new'}`} value={currentTask.searched} onChange={val => setCurrentTask({...currentTask, searched: val})} />
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-sm font-bold text-gray-700">Where I Searched</label>
+                      <button type="button" onClick={() => promptAddLink('searched')} className="text-xs font-bold text-blue-600 hover:text-blue-800">+ Add Link</button>
+                    </div>
+                    <RichEditor id={`editor-searched-${currentTask.id || 'new'}`} key={`searched-${currentTask.id || 'new'}`} value={currentTask.searched || ''} onChange={val => setCurrentTask({...currentTask, searched: val})} onInit={q => editorRefs.current['searched'] = q} />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Actions</label>
-                    <RichEditor id={`editor-actions-${currentTask.id || 'new'}`} key={`actions-${currentTask.id || 'new'}`} value={currentTask.actions} onChange={val => setCurrentTask({...currentTask, actions: val})} />
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-sm font-bold text-gray-700">Actions</label>
+                      <button type="button" onClick={() => promptAddLink('actions')} className="text-xs font-bold text-blue-600 hover:text-blue-800">+ Add Link</button>
+                    </div>
+                    <RichEditor id={`editor-actions-${currentTask.id || 'new'}`} key={`actions-${currentTask.id || 'new'}`} value={currentTask.actions || ''} onChange={val => setCurrentTask({...currentTask, actions: val})} onInit={q => editorRefs.current['actions'] = q} />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-1">Notes</label>
-                      <RichEditor id={`editor-notes-${currentTask.id || 'new'}`} key={`notes-${currentTask.id || 'new'}`} value={currentTask.notes} onChange={val => setCurrentTask({...currentTask, notes: val})} />
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="block text-sm font-bold text-gray-700">Notes</label>
+                        <button type="button" onClick={() => promptAddLink('notes')} className="text-xs font-bold text-blue-600 hover:text-blue-800">+ Add Link</button>
+                      </div>
+                      <RichEditor id={`editor-notes-${currentTask.id || 'new'}`} key={`notes-${currentTask.id || 'new'}`} value={currentTask.notes || ''} onChange={val => setCurrentTask({...currentTask, notes: val})} onInit={q => editorRefs.current['notes'] = q} />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-1">Related Files</label>
-                      <RichEditor id={`editor-related-${currentTask.id || 'new'}`} key={`related-${currentTask.id || 'new'}`} value={currentTask.related_files} onChange={val => setCurrentTask({...currentTask, related_files: val})} />
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="block text-sm font-bold text-gray-700">Related Files</label>
+                        <button type="button" onClick={() => promptAddLink('related_files')} className="text-xs font-bold text-blue-600 hover:text-blue-800">+ Add Link</button>
+                      </div>
+                      <RichEditor id={`editor-related-${currentTask.id || 'new'}`} key={`related-${currentTask.id || 'new'}`} value={currentTask.related_files || ''} onChange={val => setCurrentTask({...currentTask, related_files: val})} onInit={q => editorRefs.current['related_files'] = q} />
                     </div>
                   </div>
 
-                  {/* INDEPENDENT SHELF PAGES SECTION */}
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Shelf Pages That Need Content</label>
-                    <RichEditor id={`editor-shelf-${currentTask.id || 'new'}`} key={`shelf-${currentTask.id || 'new'}`} value={currentTask.shelf_pages} onChange={val => setCurrentTask({...currentTask, shelf_pages: val})} />
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-sm font-bold text-gray-700">Shelf Pages That Need Content</label>
+                      <button type="button" onClick={() => promptAddLink('shelf_pages')} className="text-xs font-bold text-blue-600 hover:text-blue-800">+ Add Link</button>
+                    </div>
+                    <RichEditor id={`editor-shelf-${currentTask.id || 'new'}`} key={`shelf-${currentTask.id || 'new'}`} value={currentTask.shelf_pages || ''} onChange={val => setCurrentTask({...currentTask, shelf_pages: val})} onInit={q => editorRefs.current['shelf_pages'] = q} />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Questions & Answers</label>
-                    <RichEditor id={`editor-qa-${currentTask.id || 'new'}`} key={`qa-${currentTask.id || 'new'}`} value={currentTask.qa} onChange={val => setCurrentTask({...currentTask, qa: val})} />
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-sm font-bold text-gray-700">Questions & Answers</label>
+                      <button type="button" onClick={() => promptAddLink('qa')} className="text-xs font-bold text-blue-600 hover:text-blue-800">+ Add Link</button>
+                    </div>
+                    <RichEditor id={`editor-qa-${currentTask.id || 'new'}`} key={`qa-${currentTask.id || 'new'}`} value={currentTask.qa || ''} onChange={val => setCurrentTask({...currentTask, qa: val})} onInit={q => editorRefs.current['qa'] = q} />
                   </div>
 
                   <div className="bg-blue-50 p-4 border border-blue-200 rounded">
