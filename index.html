@@ -79,13 +79,11 @@
       { name: 'Charcoal Blue', bgValue: 'bg-slate-900', colValue: 'bg-slate-900 border-slate-800 text-slate-100 shadow-xl' }
     ];
 
-    const defaultResponseTemplate = 'Hello _,\n\nThank You For Raising This Inquiry.\n\n___\n\nKind Regards';
-
     const emptyTask = {
       title: '', jira_id: '', status: 'To Do', problem: '', searched: '',
       actions: '', notes: '', related_files: '', shelf_pages: '', qa: '',
       is_project: false,
-      reporter_response: defaultResponseTemplate
+      reporter_response: ''
     };
 
     function RichEditor({ id, value, onChange }) {
@@ -226,7 +224,7 @@
       };
 
       const addTemplateSpace = async () => {
-        const newTemp = { title: 'New Template', body: defaultResponseTemplate };
+        const newTemp = { title: 'New Template', body: '' };
         const { data, error } = await supabase.from('templates').insert([newTemp]).select();
         if (!error && data) {
           setTemplateSpaces(prev => [...prev, data[0]]);
@@ -321,7 +319,9 @@
 
       const appendNewResponse = () => {
         const timestamp = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
-        const newResponseBlock = `\n\n========================================\nRESPONSE (${timestamp})\n========================================\n${defaultResponseTemplate}`;
+        const existing = currentTask.reporter_response || '';
+        const prefix = existing.trim().length > 0 ? '\n\n' : '';
+        const newResponseBlock = `${prefix}========================================\nRESPONSE (${timestamp})\n========================================\n`;
         setCurrentTask(prev => ({
           ...prev,
           reporter_response: (prev.reporter_response || '') + newResponseBlock
