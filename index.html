@@ -87,6 +87,8 @@
       title: '', jira_id: '', status: 'To Do', problem: '', searched: '',
       actions: '', notes: '', related_files: '', shelf_pages: '', qa: '',
       is_project: false,
+      reminder_date: '',
+      reminder_note: '',
       reporter_response: ''
     };
 
@@ -207,8 +209,10 @@
       const [isLoading, setIsLoading] = useState(true);
       const [copiedId, setCopiedId] = useState(null);
       
-      const [reminderDate, setReminderDate] = useState('');
-      const [reminderNote, setReminderNote] = useState('');
+      const [filterStatus, setFilterStatus] = useState('ALL'); // ALL, DUE_TODAY, OVERDUE, PROJECTS_ONLY
+      const [notificationPermission, setNotificationPermission] = useState(
+        typeof Notification !== 'undefined' ? Notification.permission : 'default'
+      );
 
       const [bgColor, setBgColor] = useState(() => {
         return localStorage.getItem('tracker_bg') || 'bg-blue-600';
@@ -223,6 +227,54 @@
         fetchTemplates();
       }, []);
 
+      // Check for Desktop Notifications every 10 seconds
+      useEffect(() => {
+        const interval = setInterval(() => {
+          checkAndTriggerNotifications();
+        }, 10000);
+        return () => clearInterval(interval);
+      }, [tasks, notificationPermission]);
+
+      const requestNotificationAccess = async () => {
+        if (typeof Notification !== 'undefined') {
+          const perm = await Notification.requestPermission();
+          setNotificationPermission(perm);
+          if (perm === 'granted') {
+            new Notification("Jira Tracker Alerts Enabled!", {
+              body: "You will receive desktop alerts for scheduled task reminders.",
+              icon: "📌"
+            });
+          }
+        } else {
+          alert("Desktop Notifications are not supported in your browser.");
+        }
+      };
+
+      const checkAndTriggerNotifications = async () => {
+        if (notificationPermission !== 'granted') return;
+
+        const now = new Date();
+        for (const task of tasks) {
+          if (task.reminder_date && !task.reminder_notified) {
+            const remTime = new Date(task.reminder_date);
+            if (remTime <= now) {
+              const jiraId = extractJiraID(task.jira_id) || 'JIRA Task';
+              const title = task.title || 'Task Reminder';
+              const note = task.reminder_note ? `\nNote: ${task.reminder_note}` : '';
+
+              new Notification(`🔔 Reminder: ${jiraId}`, {
+                body: `${title}${note}`,
+                icon: "📌"
+              });
+
+              // Mark as notified in Supabase so it doesn't trigger again
+              await supabase.from('tasks').update({ reminder_notified: true }).eq('id', task.id);
+              setTasks(prev => prev.map(t => t.id === task.id ? { ...t, reminder_notified: true } : t));
+            }
+          }
+        }
+      };
+
       const changeBgColor = (colorClass) => {
         setBgColor(colorClass);
         localStorage.setItem('tracker_bg', colorClass);
@@ -231,45 +283,6 @@
       const changeColColor = (colorClass) => {
         setColColor(colorClass);
         localStorage.setItem('tracker_col', colorClass);
-      };
-
-      const openGoogleReminder = async () => {
-        if (!reminderDate) {
-          alert("Please select a date and time for the reminder.");
-          return;
-        }
-
-        const startDate = new Date(reminderDate);
-        if (isNaN(startDate.getTime())) {
-          alert("Invalid date selected.");
-          return;
-        }
-
-        const endDate = new Date(startDate.getTime() + 15 * 60 * 1000); // 15-minute event
-
-        const formatDateGCal = (date) => {
-          return date.toISOString().replace(/-|:|\.\d\d\d/g, '');
-        };
-
-        const jiraId = extractJiraID(currentTask.jira_id) || 'JIRA';
-        const title = currentTask.title || 'Untitled Task';
-        const jiraUrl = getFormattedUrl(currentTask.jira_id) || '';
-
-        const fullNoteText = `Jira ID: ${jiraId}\nURL: ${jiraUrl}\n\nNote:\n${reminderNote}`;
-
-        // Auto-copy notes to clipboard for instant pasting anywhere
-        try {
-          await navigator.clipboard.writeText(fullNoteText);
-        } catch(e) {}
-
-        const text = encodeURIComponent(`Reminder: ${jiraId} - ${title}`);
-        const dates = `${formatDateGCal(startDate)}/${formatDateGCal(endDate)}`;
-        const details = encodeURIComponent(fullNoteText);
-        const location = encodeURIComponent(jiraUrl);
-
-        const gcalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${dates}&details=${details}&location=${location}`;
-
-        window.open(gcalUrl, '_blank');
       };
 
       const fetchTemplates = async () => {
@@ -346,6 +359,9 @@
           shelf_pages: currentTask.shelf_pages || '',
           qa: currentTask.qa || '',
           is_project: !!currentTask.is_project,
+          reminder_date: currentTask.reminder_date ? new Date(currentTask.reminder_date).toISOString() : null,
+          reminder_note: currentTask.reminder_note || '',
+          reminder_notified: false,
           reporter_response: currentTask.reporter_response || ''
         };
 
@@ -396,6 +412,36 @@
         });
       };
 
+      const formatDatetimeLocal = (isoString) => {
+        if (!isoString) return '';
+        const d = new Date(isoString);
+        d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+        return d.toISOString().slice(0, 16);
+      };
+
+      const getReminderStatus = (isoString) => {
+        if (!isoString) return null;
+        const remDate = new Date(isoString);
+        const now = new Date();
+        const todayStr = now.toDateString();
+        const remStr = remDate.toDateString();
+
+        if (remDate < now && remStr !== todayStr) {
+          return 'OVERDUE';
+        } else if (remStr === todayStr) {
+          return 'DUE_TODAY';
+        }
+        return 'UPCOMING';
+      };
+
+      // Filter tasks based on selected dropdown filter
+      const filteredTasks = tasks.filter(task => {
+        if (filterStatus === 'PROJECTS_ONLY') return task.is_project;
+        if (filterStatus === 'DUE_TODAY') return getReminderStatus(task.reminder_date) === 'DUE_TODAY';
+        if (filterStatus === 'OVERDUE') return getReminderStatus(task.reminder_date) === 'OVERDUE';
+        return true;
+      });
+
       if (isLoading) return <div className="p-8 text-xl font-bold text-gray-700">Loading Your Secure Jira Tracker...</div>;
 
       return (
@@ -408,7 +454,33 @@
               </button>
             </div>
 
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-4">
+              {/* DESKTOP NOTIFICATION TOGGLE BUTTON */}
+              <button 
+                onClick={requestNotificationAccess} 
+                className={`px-3 py-2 rounded shadow font-bold text-xs flex items-center gap-1.5 transition-all ${
+                  notificationPermission === 'granted' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-amber-500 text-white hover:bg-amber-600'
+                }`}
+                title="Enable Browser Desktop Notifications"
+              >
+                <span>🔔</span> {notificationPermission === 'granted' ? 'Alerts Active ✓' : 'Enable Desktop Alerts'}
+              </button>
+
+              {/* TASK FILTER SELECTOR */}
+              <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-300 rounded p-1.5 shadow-sm">
+                <span className="text-[10px] font-bold text-gray-700 uppercase tracking-wider">Filter Board:</span>
+                <select 
+                  value={filterStatus} 
+                  onChange={e => setFilterStatus(e.target.value)}
+                  className="border border-gray-300 rounded px-2 py-0.5 text-xs bg-white font-bold focus:ring-1 focus:ring-blue-500 outline-none cursor-pointer"
+                >
+                  <option value="ALL">All Tasks ({tasks.length})</option>
+                  <option value="DUE_TODAY">🔔 Due Today ({tasks.filter(t => getReminderStatus(t.reminder_date) === 'DUE_TODAY').length})</option>
+                  <option value="OVERDUE">⚠️ Overdue ({tasks.filter(t => getReminderStatus(t.reminder_date) === 'OVERDUE').length})</option>
+                  <option value="PROJECTS_ONLY">📌 Projects Only ({tasks.filter(t => t.is_project).length})</option>
+                </select>
+              </div>
+
               {/* STACKED SELECTORS: PAGE THEME & COLUMNS */}
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between gap-2">
@@ -446,56 +518,88 @@
                 <span>📋</span> Templates
               </button>
 
-              <button onClick={() => { setCurrentTask({ ...emptyTask }); setReminderDate(''); setReminderNote(''); setIsModalOpen(true); }} className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 font-bold transition-all text-sm">
+              <button onClick={() => { setCurrentTask({ ...emptyTask }); setIsModalOpen(true); }} className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 font-bold transition-all text-sm">
                 + New Jira Task
               </button>
             </div>
           </div>
 
           <div className="flex gap-6 overflow-x-auto pb-4">
-            {COLUMNS.map(column => (
-              <div key={column} className={`rounded-xl p-4 w-80 flex-shrink-0 min-h-[500px] border transition-all ${colColor}`}>
-                <h2 className="font-bold mb-4 border-b pb-2 text-sm border-current opacity-90">
-                  {column} ({tasks.filter(t => t.status === column).length})
-                </h2>
-                <div className="space-y-4">
-                  {tasks.filter(t => t.status === column).map(task => {
-                    const cardUrl = getFormattedUrl(task.jira_id);
-                    return (
-                      <div 
-                        key={task.id} 
-                        className={`bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-lg border-l-4 ${COLUMN_BORDER_COLORS[column] || 'border-blue-600'} transition-all transform hover:-translate-y-0.5`} 
-                        onClick={() => { setCurrentTask(task); setReminderDate(''); setReminderNote(''); setIsModalOpen(true); }}
-                      >
-                        <div className="flex justify-between items-center mb-2">
-                          <div className="flex items-center gap-1.5 truncate max-w-[150px]">
-                            {task.is_project && (
-                              <span className="w-2.5 h-2.5 bg-red-600 rounded-full flex-shrink-0 inline-block shadow-sm" title="Important Project"></span>
-                            )}
-                            {cardUrl ? (
-                              <a 
-                                href={cardUrl} 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
-                                onClick={e => e.stopPropagation()} 
-                                className="text-xs font-bold text-blue-600 hover:text-blue-800 no-underline truncate"
-                                title="Open Jira URL"
-                              >
-                                {extractJiraID(task.jira_id)}
-                              </a>
-                            ) : (
-                              <span className="text-xs font-bold text-blue-600 truncate">{extractJiraID(task.jira_id)}</span>
-                            )}
+            {COLUMNS.map(column => {
+              const columnTasks = filteredTasks.filter(t => t.status === column);
+              return (
+                <div key={column} className={`rounded-xl p-4 w-80 flex-shrink-0 min-h-[500px] border transition-all ${colColor}`}>
+                  <h2 className="font-bold mb-4 border-b pb-2 text-sm border-current opacity-90">
+                    {column} ({columnTasks.length})
+                  </h2>
+                  <div className="space-y-4">
+                    {columnTasks.map(task => {
+                      const cardUrl = getFormattedUrl(task.jira_id);
+                      const remStatus = getReminderStatus(task.reminder_date);
+
+                      let cardBgStyle = "bg-white border-l-4 " + (COLUMN_BORDER_COLORS[column] || 'border-blue-600');
+                      if (remStatus === 'OVERDUE') {
+                        cardBgStyle = "bg-red-50/90 border-l-4 border-red-600 ring-2 ring-red-500/40";
+                      } else if (remStatus === 'DUE_TODAY') {
+                        cardBgStyle = "bg-purple-50/90 border-l-4 border-purple-600 ring-2 ring-purple-500/40";
+                      }
+
+                      return (
+                        <div 
+                          key={task.id} 
+                          className={`p-4 rounded-lg shadow cursor-pointer hover:shadow-lg transition-all transform hover:-translate-y-0.5 ${cardBgStyle}`} 
+                          onClick={() => { setCurrentTask(task); setIsModalOpen(true); }}
+                        >
+                          <div className="flex justify-between items-center mb-2">
+                            <div className="flex items-center gap-1.5 truncate max-w-[150px]">
+                              {task.is_project && (
+                                <span className="w-2.5 h-2.5 bg-red-600 rounded-full flex-shrink-0 inline-block shadow-sm" title="Important Project"></span>
+                              )}
+                              {cardUrl ? (
+                                <a 
+                                  href={cardUrl} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer" 
+                                  onClick={e => e.stopPropagation()} 
+                                  className="text-xs font-bold text-blue-600 hover:text-blue-800 no-underline truncate"
+                                  title="Open Jira URL"
+                                >
+                                  {extractJiraID(task.jira_id)}
+                                </a>
+                              ) : (
+                                <span className="text-xs font-bold text-blue-600 truncate">{extractJiraID(task.jira_id)}</span>
+                              )}
+                            </div>
+                            <span className="text-[10px] text-gray-400">{formatDate(task.created_at)}</span>
                           </div>
-                          <span className="text-[10px] text-gray-400">{formatDate(task.created_at)}</span>
+
+                          <div className="font-semibold text-gray-900 line-clamp-2">{task.title || 'Untitled Task'}</div>
+
+                          {/* IN-APP REMINDER BADGES */}
+                          {remStatus === 'OVERDUE' && (
+                            <div className="mt-2.5 text-[11px] font-bold text-red-800 bg-red-100 border border-red-300 px-2 py-1 rounded flex items-center gap-1 w-fit animate-pulse">
+                              <span>⚠️ Overdue:</span> {formatDate(task.reminder_date)}
+                            </div>
+                          )}
+
+                          {remStatus === 'DUE_TODAY' && (
+                            <div className="mt-2.5 text-[11px] font-bold text-purple-900 bg-purple-100 border border-purple-300 px-2 py-1 rounded flex items-center gap-1 w-fit">
+                              <span>🔔 Due Today:</span> {formatDate(task.reminder_date)}
+                            </div>
+                          )}
+
+                          {remStatus === 'UPCOMING' && (
+                            <div className="mt-2.5 text-[11px] font-medium text-slate-700 bg-slate-100 border border-slate-300 px-2 py-0.5 rounded flex items-center gap-1 w-fit">
+                              <span>🕒 Reminder:</span> {formatDate(task.reminder_date)}
+                            </div>
+                          )}
                         </div>
-                        <div className="font-semibold text-gray-900 line-clamp-2">{task.title || 'Untitled Task'}</div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* TEMPLATES MANAGER MODAL WINDOW */}
@@ -630,33 +734,24 @@
                     </div>
                   </div>
 
-                  {/* GOOGLE REMINDER SECTION (PRE-FILLS EVERYTHING & COPIES NOTES) */}
-                  <div className="bg-blue-50 p-4 border border-blue-200 rounded-lg space-y-3">
-                    <div className="flex justify-between items-center">
-                      <label className="block text-sm font-bold text-blue-900 flex items-center gap-1.5">
-                        <span>🔔</span> Set Google Reminder / Task
-                      </label>
-                      <button 
-                        type="button" 
-                        onClick={openGoogleReminder} 
-                        className="text-xs bg-blue-600 text-white font-bold px-3 py-1.5 rounded hover:bg-blue-700 transition-all shadow-sm flex items-center gap-1"
-                      >
-                        <span>➕</span> Create Reminder / Task
-                      </button>
-                    </div>
+                  {/* IN-APP REMINDER DATE & DESKTOP NOTIFICATION SETTINGS */}
+                  <div className="bg-purple-50 p-4 border border-purple-200 rounded-lg space-y-3">
+                    <label className="block text-sm font-bold text-purple-900 flex items-center gap-1.5">
+                      <span>🔔</span> Scheduled Reminder & Desktop Alert
+                    </label>
                     <div className="flex gap-3">
                       <input 
                         type="datetime-local" 
-                        className="w-1/3 border border-blue-300 p-2 rounded text-xs bg-white focus:ring-2 focus:ring-blue-500 outline-none font-medium" 
-                        value={reminderDate} 
-                        onChange={e => setReminderDate(e.target.value)} 
+                        className="w-1/3 border border-purple-300 p-2 rounded text-xs bg-white focus:ring-2 focus:ring-purple-500 outline-none font-medium" 
+                        value={formatDatetimeLocal(currentTask.reminder_date)} 
+                        onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, reminder_date: val})); }} 
                       />
                       <input 
                         type="text" 
-                        className="flex-1 border border-blue-300 p-2 rounded text-xs bg-white focus:ring-2 focus:ring-blue-500 outline-none" 
-                        placeholder="Free-text note for reminder (e.g., Follow up with team on draft response)..." 
-                        value={reminderNote} 
-                        onChange={e => setReminderNote(e.target.value)} 
+                        className="flex-1 border border-purple-300 p-2 rounded text-xs bg-white focus:ring-2 focus:ring-purple-500 outline-none" 
+                        placeholder="Reminder note for desktop alert (e.g. Check draft response)..." 
+                        value={currentTask.reminder_note || ''} 
+                        onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, reminder_note: val})); }} 
                       />
                     </div>
                   </div>
