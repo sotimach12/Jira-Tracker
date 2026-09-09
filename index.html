@@ -212,6 +212,7 @@
       
       const modalRef = useRef(null);
 
+      const [searchQuery, setSearchQuery] = useState('');
       const [filterStatus, setFilterStatus] = useState('ALL'); 
       const [notificationPermission, setNotificationPermission] = useState(
         typeof Notification !== 'undefined' ? Notification.permission : 'default'
@@ -459,6 +460,15 @@
       };
 
       const filteredTasks = tasks.filter(task => {
+        // Search Filter (Title or Jira ID)
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase();
+          const matchesTitle = (task.title || '').toLowerCase().includes(q);
+          const matchesJira = (task.jira_id || '').toLowerCase().includes(q);
+          if (!matchesTitle && !matchesJira) return false;
+        }
+
+        // Status/Category Filter
         if (filterStatus === 'PROJECTS_ONLY') return task.is_project;
         if (filterStatus === 'DUE_TODAY') return getReminderStatus(task.reminder_date) === 'DUE_TODAY';
         if (filterStatus === 'OVERDUE') return getReminderStatus(task.reminder_date) === 'OVERDUE';
@@ -471,12 +481,34 @@
 
       return (
         <div className={`min-h-screen p-8 font-sans transition-colors duration-300 ${bgColor}`}>
-          <div className="flex justify-between items-center mb-8 bg-white/90 backdrop-blur-md p-4 rounded-xl shadow-lg border border-white/20">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Jira Tracker</h1>
-              <button onClick={() => supabase.auth.signOut()} className="text-sm font-bold text-red-600 hover:text-red-800 mt-1">
-                Securely Log Out
-              </button>
+          <div className="flex justify-between items-center mb-8 bg-white/90 backdrop-blur-md p-4 rounded-xl shadow-lg border border-white/20 gap-4">
+            <div className="flex items-center gap-4">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Jira Tracker</h1>
+                <button onClick={() => supabase.auth.signOut()} className="text-sm font-bold text-red-600 hover:text-red-800 mt-1">
+                  Securely Log Out
+                </button>
+              </div>
+
+              {/* SEARCH BAR FOR ALL TITLES */}
+              <div className="relative ml-4">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-2.5 text-gray-400">🔍</span>
+                <input 
+                  type="text" 
+                  placeholder="Search titles or Jira IDs..." 
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="pl-8 pr-8 py-1.5 border border-gray-300 rounded-lg text-xs w-64 bg-white focus:ring-2 focus:ring-blue-500 outline-none font-medium shadow-sm"
+                />
+                {searchQuery && (
+                  <button 
+                    onClick={() => setSearchQuery('')}
+                    className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-xs font-bold text-gray-400 hover:text-red-500"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="flex items-center gap-4">
@@ -547,15 +579,16 @@
             </div>
           </div>
 
+          {/* COLUMNS WITH FIXED HEIGHT AND VERTICAL SCROLLBAR */}
           <div className="flex gap-6 overflow-x-auto pb-4">
             {COLUMNS.map(column => {
               const columnTasks = filteredTasks.filter(t => t.status === column);
               return (
-                <div key={column} className={`rounded-xl p-4 w-80 flex-shrink-0 min-h-[500px] border transition-all ${colColor}`}>
-                  <h2 className="font-bold mb-4 border-b pb-2 text-sm border-current opacity-90">
+                <div key={column} className={`rounded-xl p-4 w-80 flex-shrink-0 flex flex-col max-h-[calc(100vh-200px)] border transition-all ${colColor}`}>
+                  <h2 className="font-bold mb-4 border-b pb-2 text-sm border-current opacity-90 flex-shrink-0">
                     {column} ({columnTasks.length})
                   </h2>
-                  <div className="space-y-4">
+                  <div className="space-y-4 overflow-y-auto pr-1.5 flex-1">
                     {columnTasks.map(task => {
                       const cardUrl = getFormattedUrl(task.jira_id);
                       const remStatus = getReminderStatus(task.reminder_date);
@@ -767,7 +800,7 @@
                     </div>
                   </div>
 
-                  {/* REMINDER CATEGORY, DATE CONFIGURATION & CLEAR BUTTON */}
+                  {/* REMINDER CATEGORY & DATE CONFIGURATION */}
                   <div className="bg-purple-50 p-4 border border-purple-200 rounded-lg space-y-3">
                     <div className="flex justify-between items-center">
                       <label className="block text-sm font-bold text-purple-900 flex items-center gap-1.5">
