@@ -432,7 +432,7 @@
                                 target="_blank" 
                                 rel="noopener noreferrer" 
                                 onClick={e => e.stopPropagation()} 
-                                className="text-xs font-bold text-blue-600 hover:text-blue-800 underline truncate"
+                                className="text-xs font-bold text-blue-600 hover:text-blue-800 no-underline truncate"
                                 title="Open Jira URL"
                               >
                                 {extractJiraID(task.jira_id)}
@@ -546,7 +546,7 @@
                       <input type="text" className="w-full border border-gray-300 p-2 rounded" value={currentTask.title || ''} onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, title: val})); }} />
                     </div>
                     
-                    {/* JIRA LINK/ID INPUT WITH CLICKABLE OPEN LINK BUTTON */}
+                    {/* JIRA LINK/ID INPUT WITH ICON-ONLY LINK BUTTON */}
                     <div className="w-1/3">
                       <div className="flex justify-between items-center mb-1">
                         <label className="block text-sm font-bold text-gray-700">Jira Link/ID</label>
@@ -555,9 +555,10 @@
                             href={getFormattedUrl(currentTask.jira_id)} 
                             target="_blank" 
                             rel="noopener noreferrer" 
-                            className="text-xs font-bold text-blue-600 hover:text-blue-800 underline"
+                            className="text-sm font-bold text-blue-600 hover:text-blue-800 no-underline"
+                            title="Open Jira URL"
                           >
-                            Open Link 🔗
+                            🔗
                           </a>
                         )}
                       </div>
