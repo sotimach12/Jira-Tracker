@@ -81,10 +81,9 @@
 
     const defaultResponseTemplate = 'Hello _,\n\nThank You For Raising This Inquiry.\n\n___\n\nKind Regards';
 
-    const INITIAL_TEMPLATES = [
-      { name: 'Standard Inquiry Response', response: 'Hello _,\n\nThank You For Raising This Inquiry.\n\n___\n\nKind Regards' },
-      { name: 'Pending Info Response', response: 'Hello _,\n\nWe Are Currently Reviewing This Case And Require Additional Details.\n\nKind Regards' },
-      { name: 'Resolution Response', response: 'Hello _,\n\nThis Inquiry Has Been Resolved And Closed.\n\nKind Regards' }
+    const INITIAL_TEMPLATE_SPACES = [
+      { id: 1, title: 'Standard Inquiry Template', body: 'Hello _,\n\nThank You For Raising This Inquiry.\n\n___\n\nKind Regards' },
+      { id: 2, title: 'Information Required Template', body: 'Hello _,\n\nWe Are Currently Reviewing This Case And Require Additional Details:\n- \n\nKind Regards' }
     ];
 
     const emptyTask = {
@@ -195,12 +194,14 @@
     function WorkspaceTracker() {
       const [tasks, setTasks] = useState([]);
       const [isModalOpen, setIsModalOpen] = useState(false);
+      const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
       const [currentTask, setCurrentTask] = useState(emptyTask);
       const [isLoading, setIsLoading] = useState(true);
+      const [copiedId, setCopiedId] = useState(null);
       
-      const [customTemplates, setCustomTemplates] = useState(() => {
-        const saved = localStorage.getItem('jira_templates');
-        return saved ? JSON.parse(saved) : INITIAL_TEMPLATES;
+      const [templateSpaces, setTemplateSpaces] = useState(() => {
+        const saved = localStorage.getItem('jira_template_spaces');
+        return saved ? JSON.parse(saved) : INITIAL_TEMPLATE_SPACES;
       });
 
       const [bgColor, setBgColor] = useState(() => {
@@ -223,29 +224,50 @@
         localStorage.setItem('tracker_col', colorClass);
       };
 
-      const handleTemplateSelect = (e) => {
-        const selectedVal = e.target.value;
-        if (!selectedVal) return;
+      const saveTemplatesToStorage = (newSpaces) => {
+        setTemplateSpaces(newSpaces);
+        localStorage.setItem('jira_template_spaces', JSON.stringify(newSpaces));
+      };
 
-        if (selectedVal === 'ADD_NEW') {
-          const tName = prompt("Enter a name for your custom template:");
-          if (!tName) return;
-          const tBody = prompt("Enter the response text template:");
-          if (!tBody) return;
+      const addTemplateSpace = () => {
+        const newSpace = {
+          id: Date.now(),
+          title: `New Template #${templateSpaces.length + 1}`,
+          body: defaultResponseTemplate
+        };
+        saveTemplatesToStorage([...templateSpaces, newSpace]);
+      };
 
-          const updated = [...customTemplates, { name: tName, response: tBody }];
-          setCustomTemplates(updated);
-          localStorage.setItem('jira_templates', JSON.stringify(updated));
-          return;
+      const updateTemplateSpace = (id, field, value) => {
+        const updated = templateSpaces.map(space => space.id === id ? { ...space, [field]: value } : space);
+        saveTemplatesToStorage(updated);
+      };
+
+      const removeTemplateSpace = (id) => {
+        if (window.confirm("Are you sure you want to remove this template space?")) {
+          const updated = templateSpaces.filter(space => space.id !== id);
+          saveTemplatesToStorage(updated);
         }
+      };
 
-        const templateObj = customTemplates.find(t => t.name === selectedVal);
-        if (templateObj) {
-          setCurrentTask({
-            ...emptyTask,
-            reporter_response: templateObj.response
-          });
-          setIsModalOpen(true);
+      // Direct copy functionality with fallback
+      const copyTemplateText = async (space) => {
+        const textToCopy = space.body || '';
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(textToCopy);
+          } else {
+            const textArea = document.createElement('textarea');
+            textArea.value = textToCopy;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+          }
+          setCopiedId(space.id);
+          setTimeout(() => setCopiedId(null), 2000);
+        } catch (err) {
+          alert("Failed to copy text. Please select and copy manually.");
         }
       };
 
@@ -330,14 +352,14 @@
             </div>
 
             <div className="flex items-center gap-6">
-              {/* STACKED SELECTORS: PAGE THEME, COLUMNS & TEMPLATES */}
+              {/* STACKED SELECTORS: PAGE THEME & COLUMNS */}
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[10px] font-bold text-gray-700 uppercase tracking-wider">Page Theme:</span>
                   <select 
                     value={bgColor} 
                     onChange={e => changeBgColor(e.target.value)}
-                    className="border border-gray-300 rounded px-1.5 py-0.5 text-xs bg-white font-medium focus:ring-1 focus:ring-blue-500 outline-none shadow-sm cursor-pointer min-w-[120px]"
+                    className="border border-gray-300 rounded px-1.5 py-0.5 text-xs bg-white font-medium focus:ring-1 focus:ring-blue-500 outline-none shadow-sm cursor-pointer min-w-[110px]"
                   >
                     {UNIFIED_COLOR_OPTIONS.map(c => (
                       <option key={c.name} value={c.bgValue}>{c.name}</option>
@@ -350,29 +372,22 @@
                   <select 
                     value={colColor} 
                     onChange={e => changeColColor(e.target.value)}
-                    className="border border-gray-300 rounded px-1.5 py-0.5 text-xs bg-white font-medium focus:ring-1 focus:ring-blue-500 outline-none shadow-sm cursor-pointer min-w-[120px]"
+                    className="border border-gray-300 rounded px-1.5 py-0.5 text-xs bg-white font-medium focus:ring-1 focus:ring-blue-500 outline-none shadow-sm cursor-pointer min-w-[110px]"
                   >
                     {UNIFIED_COLOR_OPTIONS.map(c => (
                       <option key={c.name} value={c.colValue}>{c.name}</option>
                     ))}
                   </select>
                 </div>
-
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider">Templates:</span>
-                  <select 
-                    onChange={handleTemplateSelect}
-                    defaultValue=""
-                    className="border border-blue-300 bg-blue-50 rounded px-1.5 py-0.5 text-xs font-bold text-blue-800 focus:ring-1 focus:ring-blue-500 outline-none shadow-sm cursor-pointer min-w-[120px]"
-                  >
-                    <option value="" disabled>Select Template</option>
-                    {customTemplates.map(t => (
-                      <option key={t.name} value={t.name}>{t.name}</option>
-                    ))}
-                    <option value="ADD_NEW">+ Add Custom Template</option>
-                  </select>
-                </div>
               </div>
+
+              {/* TEMPLATES BUTTON */}
+              <button 
+                onClick={() => setIsTemplateModalOpen(true)} 
+                className="bg-indigo-600 text-white px-3.5 py-2 rounded shadow hover:bg-indigo-700 font-bold transition-all text-xs flex items-center gap-1.5"
+              >
+                <span>📋</span> Templates
+              </button>
 
               <button onClick={() => { setCurrentTask({ ...emptyTask }); setIsModalOpen(true); }} className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 font-bold transition-all text-sm">
                 + New Jira Task
@@ -410,6 +425,80 @@
             ))}
           </div>
 
+          {/* TEMPLATES MANAGER MODAL WINDOW */}
+          {isTemplateModalOpen && (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-xl w-full max-w-3xl max-h-[85vh] overflow-y-auto p-6 shadow-2xl space-y-6">
+                <div className="flex justify-between items-center border-b pb-3">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">Saved Template Spaces</h2>
+                    <p className="text-xs text-gray-500 mt-1">Copy template text instantly to your clipboard for external use.</p>
+                  </div>
+                  <button onClick={() => setIsTemplateModalOpen(false)} className="text-gray-500 hover:text-red-500 font-bold text-xl">✕</button>
+                </div>
+
+                <div className="space-y-4 max-h-[55vh] overflow-y-auto pr-2">
+                  {templateSpaces.map((space, index) => (
+                    <div key={space.id || index} className="bg-gray-50 p-4 border border-gray-200 rounded-lg space-y-3 relative shadow-sm">
+                      <div className="flex justify-between items-center gap-4">
+                        <input 
+                          type="text" 
+                          className="font-bold text-gray-800 bg-white border border-gray-300 rounded px-2.5 py-1 text-sm flex-1 focus:ring-2 focus:ring-blue-500 outline-none" 
+                          value={space.title} 
+                          onChange={e => updateTemplateSpace(space.id, 'title', e.target.value)} 
+                          placeholder="Template Title" 
+                        />
+                        <div className="flex items-center gap-2">
+                          <button 
+                            type="button" 
+                            onClick={() => copyTemplateText(space)} 
+                            className={`text-white text-xs font-bold px-3 py-1.5 rounded shadow-sm transition-all ${
+                              copiedId === space.id ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-blue-600 hover:bg-blue-700'
+                            }`}
+                          >
+                            {copiedId === space.id ? 'Copied! ✓' : 'Copy Text'}
+                          </button>
+                          <button 
+                            type="button" 
+                            onClick={() => removeTemplateSpace(space.id)} 
+                            className="text-red-500 hover:text-red-700 font-bold text-sm px-1.5" 
+                            title="Remove Space"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <textarea 
+                          className="w-full border border-gray-300 rounded p-2 text-xs font-mono bg-white h-28 focus:ring-2 focus:ring-blue-500 outline-none" 
+                          value={space.body} 
+                          onChange={e => updateTemplateSpace(space.id, 'body', e.target.value)} 
+                          placeholder="Free text space for template response..."
+                        ></textarea>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex justify-between items-center border-t pt-4">
+                  <button 
+                    onClick={addTemplateSpace} 
+                    className="bg-indigo-600 text-white text-xs font-bold px-4 py-2 rounded hover:bg-indigo-700 shadow-sm transition-all"
+                  >
+                    + Add Template Space
+                  </button>
+                  <button 
+                    onClick={() => setIsTemplateModalOpen(false)} 
+                    className="bg-gray-200 text-gray-800 text-xs font-bold px-4 py-2 rounded hover:bg-gray-300 transition-all"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TASK DOCUMENT MODAL WINDOW */}
           {isModalOpen && (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
               <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
