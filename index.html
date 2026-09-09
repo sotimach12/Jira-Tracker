@@ -82,8 +82,8 @@
     const defaultResponseTemplate = 'Hello _,\n\nThank You For Raising This Inquiry.\n\n___\n\nKind Regards';
 
     const INITIAL_TEMPLATE_SPACES = [
-      { id: 1, title: 'Standard Inquiry Template', body: 'Hello _,\n\nThank You For Raising This Inquiry.\n\n___\n\nKind Regards' },
-      { id: 2, title: 'Information Required Template', body: 'Hello _,\n\nWe Are Currently Reviewing This Case And Require Additional Details:\n- \n\nKind Regards' }
+      { id: 1, title: 'Standard Inquiry Template', body: '<p>Hello _,</p><p><br></p><p>Thank You For Raising This Inquiry.</p><p>___</p><p><br></p><p>Kind Regards</p>' },
+      { id: 2, title: 'Information Required Template', body: '<p>Hello _,</p><p><br></p><p>We Are Currently Reviewing This Case And Require Additional Details:</p><ul><li></li></ul><p>Kind Regards</p>' }
     ];
 
     const emptyTask = {
@@ -108,7 +108,7 @@
                 [{ 'color': [] }, { 'background': [] }],
                 [{ 'list': 'ordered'}, { 'list': 'bullet' }],
                 [{ 'align': [] }],
-                ['link', 'clean']
+                ['link', 'image', 'clean']
               ]
             }
           });
@@ -250,15 +250,24 @@
         }
       };
 
-      // Direct copy functionality with fallback
+      // Copy text and pasted rich HTML/Images to clipboard
       const copyTemplateText = async (space) => {
-        const textToCopy = space.body || '';
+        const htmlContent = space.body || '';
         try {
-          if (navigator.clipboard && navigator.clipboard.writeText) {
-            await navigator.clipboard.writeText(textToCopy);
+          if (navigator.clipboard && window.ClipboardItem) {
+            const blobHtml = new Blob([htmlContent], { type: 'text/html' });
+            
+            // Plain text fallback strip
+            const tmp = document.createElement('div');
+            tmp.innerHTML = htmlContent;
+            const plainText = tmp.textContent || tmp.innerText || '';
+            const blobText = new Blob([plainText], { type: 'text/plain' });
+
+            const data = [new ClipboardItem({ 'text/html': blobHtml, 'text/plain': blobText })];
+            await navigator.clipboard.write(data);
           } else {
             const textArea = document.createElement('textarea');
-            textArea.value = textToCopy;
+            textArea.value = htmlContent;
             document.body.appendChild(textArea);
             textArea.select();
             document.execCommand('copy');
@@ -267,7 +276,7 @@
           setCopiedId(space.id);
           setTimeout(() => setCopiedId(null), 2000);
         } catch (err) {
-          alert("Failed to copy text. Please select and copy manually.");
+          alert("Failed to copy text. Please copy manually.");
         }
       };
 
@@ -432,12 +441,12 @@
                 <div className="flex justify-between items-center border-b pb-3">
                   <div>
                     <h2 className="text-2xl font-bold text-gray-900">Saved Template Spaces</h2>
-                    <p className="text-xs text-gray-500 mt-1">Copy template text instantly to your clipboard for external use.</p>
+                    <p className="text-xs text-gray-500 mt-1">Paste images (Ctrl+V) directly into template spaces and copy text & images instantly.</p>
                   </div>
                   <button onClick={() => setIsTemplateModalOpen(false)} className="text-gray-500 hover:text-red-500 font-bold text-xl">✕</button>
                 </div>
 
-                <div className="space-y-4 max-h-[55vh] overflow-y-auto pr-2">
+                <div className="space-y-6 max-h-[55vh] overflow-y-auto pr-2">
                   {templateSpaces.map((space, index) => (
                     <div key={space.id || index} className="bg-gray-50 p-4 border border-gray-200 rounded-lg space-y-3 relative shadow-sm">
                       <div className="flex justify-between items-center gap-4">
@@ -468,13 +477,14 @@
                           </button>
                         </div>
                       </div>
+                      
+                      {/* RICH EDITOR FOR EACH TEMPLATE SPACE */}
                       <div>
-                        <textarea 
-                          className="w-full border border-gray-300 rounded p-2 text-xs font-mono bg-white h-28 focus:ring-2 focus:ring-blue-500 outline-none" 
-                          value={space.body} 
-                          onChange={e => updateTemplateSpace(space.id, 'body', e.target.value)} 
-                          placeholder="Free text space for template response..."
-                        ></textarea>
+                        <RichEditor 
+                          id={`template-editor-${space.id}`} 
+                          value={space.body || ''} 
+                          onChange={val => updateTemplateSpace(space.id, 'body', val)} 
+                        />
                       </div>
                     </div>
                   ))}
