@@ -69,6 +69,13 @@
       );
     }
 
+    // Helper to extract clean OPPR / Jira ID (e.g. OPPR-11359) if a full URL was pasted into the field
+    function extractJiraID(input) {
+      if (!input) return '';
+      const match = input.match(/[A-Z]+-\d+/i);
+      return match ? match[0].toUpperCase() : input;
+    }
+
     function Auth() {
       const [loading, setLoading] = useState(false);
       const [email, setEmail] = useState('');
@@ -273,9 +280,13 @@
                 <div className="space-y-4">
                   {tasks.filter(t => t.status === column).map(task => (
                     <div key={task.id} className="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-lg border-l-4 border-blue-600 transition-all transform hover:-translate-y-0.5" onClick={() => { setCurrentTask(task); setIsModalOpen(true); }}>
-                      <div className="mb-1">
-                        <span className="text-xs font-bold text-blue-600">{task.jira_id || ''}</span>
+                      <div className="flex justify-between items-center mb-2">
+                        {/* OPPR ID ON THE TOP LEFT */}
+                        <span className="text-xs font-bold text-blue-600 truncate max-w-[140px]">{extractJiraID(task.jira_id)}</span>
+                        {/* CREATION DATE ON THE TOP RIGHT */}
+                        <span className="text-[10px] text-gray-400">{formatDate(task.created_at)}</span>
                       </div>
+                      {/* TITLE ONLY */}
                       <div className="font-semibold text-gray-900 line-clamp-2">{task.title || 'Untitled Task'}</div>
                     </div>
                   ))}
