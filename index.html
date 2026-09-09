@@ -53,23 +53,51 @@
       reporter_response: defaultResponseTemplate
     };
 
-    function HTMLContent({ content }) {
+    // Clean Link Renderer (Parses both [Display Text](URL) and raw http/https links)
+    function RenderLinks({ content }) {
       if (!content) return null;
-      const urlRegex = /(https?:\/\/[^\s<]+)/g;
-      let formattedContent = content.replace(urlRegex, (url) => {
-        if (url.includes('href=')) return url;
-        return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-blue-600 underline font-semibold hover:text-blue-800 break-all">${url}</a>`;
-      });
+
+      // Clean up any old broken HTML tags if present
+      let cleanContent = content.replace(/<a [^>]*href="([^"]+)"[^>]*>(.*?)<\/a>/gi, '[$2]($1)');
+      cleanContent = cleanContent.replace(/target="_blank"[^>]*/gi, '');
+
+      // Regex for [Text](URL) or raw URLs
+      const tokenRegex = /(\[[^\]]+\]\(https?:\/\/[^\)]+\)|https?:\/\/[^\s<]+)/g;
+      const lines = cleanContent.split('\n');
 
       return (
-        <div 
-          className="text-xs bg-gray-50 p-2 rounded border mt-1 space-y-1 text-gray-800 break-words"
-          dangerouslySetInnerHTML={{ __html: formattedContent.replace(/\n/g, '<br/>') }} 
-        />
+        <div className="text-xs bg-gray-50 p-2 rounded border mt-1 space-y-1 text-gray-800 break-words">
+          {lines.map((line, lineIdx) => {
+            const parts = line.split(tokenRegex);
+            return (
+              <div key={lineIdx}>
+                {parts.map((part, i) => {
+                  // Check for [Text](URL) format
+                  const mdMatch = part.match(/^\[([^\]]+)\]\((https?:\/\/[^\)]+)\)$/);
+                  if (mdMatch) {
+                    return (
+                      <a key={i} href={mdMatch[2]} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline font-semibold hover:text-blue-800">
+                        {mdMatch[1]}
+                      </a>
+                    );
+                  }
+                  // Check for raw URL
+                  if (part.match(/^https?:\/\/[^\s<]+$/)) {
+                    return (
+                      <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline font-semibold hover:text-blue-800">
+                        {part}
+                      </a>
+                    );
+                  }
+                  return part;
+                })}
+              </div>
+            );
+          })}
+        </div>
       );
     }
 
-    // Helper to extract clean OPPR / Jira ID (e.g. OPPR-11359) if a full URL was pasted into the field
     function extractJiraID(input) {
       if (!input) return '';
       const match = input.match(/[A-Z]+-\d+/i);
@@ -196,18 +224,19 @@
         });
       };
 
+      // Prompt to insert clean markdown link format: [Text](URL)
       const promptAddLink = (fieldKey) => {
-        const linkText = prompt("Enter the display text for the link (e.g. Jira Ticket, Doc, Reference):");
+        const linkText = prompt("Enter the display text for the link (e.g. Reference Link, Doc, Shelf):");
         if (!linkText) return;
         
-        let url = prompt("Enter the full web URL (e.g. https://google.com):");
+        let url = prompt("Enter the full web URL:");
         if (!url) return;
         
         if (!url.startsWith('http://') && !url.startsWith('https://')) {
           url = 'https://' + url;
         }
 
-        const formattedLink = `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-blue-600 underline font-semibold hover:text-blue-800">${linkText}</a>`;
+        const formattedLink = `[${linkText}](${url})`;
         const currentValue = currentTask[fieldKey] || '';
         const newValue = currentValue ? `${currentValue}\n${formattedLink}` : formattedLink;
         
@@ -281,12 +310,9 @@
                   {tasks.filter(t => t.status === column).map(task => (
                     <div key={task.id} className="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-lg border-l-4 border-blue-600 transition-all transform hover:-translate-y-0.5" onClick={() => { setCurrentTask(task); setIsModalOpen(true); }}>
                       <div className="flex justify-between items-center mb-2">
-                        {/* OPPR ID ON THE TOP LEFT */}
                         <span className="text-xs font-bold text-blue-600 truncate max-w-[140px]">{extractJiraID(task.jira_id)}</span>
-                        {/* CREATION DATE ON THE TOP RIGHT */}
                         <span className="text-[10px] text-gray-400">{formatDate(task.created_at)}</span>
                       </div>
-                      {/* TITLE ONLY */}
                       <div className="font-semibold text-gray-900 line-clamp-2">{task.title || 'Untitled Task'}</div>
                     </div>
                   ))}
@@ -318,7 +344,7 @@
                       <input type="text" className="w-full border border-gray-300 p-2 rounded" value={currentTask.jira_id} onChange={e => setCurrentTask({...currentTask, jira_id: e.target.value})} />
                       {currentTask.jira_id && (
                         <div className="mt-1">
-                          <HTMLContent content={currentTask.jira_id.startsWith('http') ? currentTask.jira_id : `https://${currentTask.jira_id}`} />
+                          <RenderLinks content={currentTask.jira_id.startsWith('http') ? currentTask.jira_id : `https://${currentTask.jira_id}`} />
                         </div>
                       )}
                     </div>
@@ -341,7 +367,7 @@
                       <button type="button" onClick={() => promptAddLink('searched')} className="text-xs font-bold text-blue-600 hover:text-blue-800">+ Add Link</button>
                     </div>
                     <textarea className="w-full border border-gray-300 p-2 rounded h-16" value={currentTask.searched} onChange={e => setCurrentTask({...currentTask, searched: e.target.value})}></textarea>
-                    {currentTask.searched && <HTMLContent content={currentTask.searched} />}
+                    {currentTask.searched && <RenderLinks content={currentTask.searched} />}
                   </div>
 
                   <div>
@@ -350,7 +376,7 @@
                       <button type="button" onClick={() => promptAddLink('actions')} className="text-xs font-bold text-blue-600 hover:text-blue-800">+ Add Link</button>
                     </div>
                     <textarea className="w-full border border-gray-300 p-2 rounded h-24" value={currentTask.actions} onChange={e => setCurrentTask({...currentTask, actions: e.target.value})}></textarea>
-                    {currentTask.actions && <HTMLContent content={currentTask.actions} />}
+                    {currentTask.actions && <RenderLinks content={currentTask.actions} />}
                   </div>
 
                   <div className="flex gap-4">
@@ -360,7 +386,7 @@
                         <button type="button" onClick={() => promptAddLink('notes')} className="text-xs font-bold text-blue-600 hover:text-blue-800">+ Add Link</button>
                       </div>
                       <textarea className="w-full border border-gray-300 p-2 rounded h-24" value={currentTask.notes} onChange={e => setCurrentTask({...currentTask, notes: e.target.value})}></textarea>
-                      {currentTask.notes && <HTMLContent content={currentTask.notes} />}
+                      {currentTask.notes && <RenderLinks content={currentTask.notes} />}
                     </div>
 
                     <div className="flex-1">
@@ -369,7 +395,7 @@
                         <button type="button" onClick={() => promptAddLink('related_files')} className="text-xs font-bold text-blue-600 hover:text-blue-800">+ Add Link</button>
                       </div>
                       <textarea className="w-full border border-gray-300 p-2 rounded h-24" value={currentTask.related_files} onChange={e => setCurrentTask({...currentTask, related_files: e.target.value})}></textarea>
-                      {currentTask.related_files && <HTMLContent content={currentTask.related_files} />}
+                      {currentTask.related_files && <RenderLinks content={currentTask.related_files} />}
                     </div>
                   </div>
 
@@ -379,7 +405,7 @@
                       <button type="button" onClick={() => promptAddLink('qa')} className="text-xs font-bold text-blue-600 hover:text-blue-800">+ Add Link</button>
                     </div>
                     <textarea className="w-full border border-gray-300 p-2 rounded h-24" value={currentTask.qa} onChange={e => setCurrentTask({...currentTask, qa: e.target.value})}></textarea>
-                    {currentTask.qa && <HTMLContent content={currentTask.qa} />}
+                    {currentTask.qa && <RenderLinks content={currentTask.qa} />}
                   </div>
 
                   <div className="bg-blue-50 p-4 border border-blue-200 rounded">
