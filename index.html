@@ -113,6 +113,11 @@
             }
           });
 
+          // Enable spellcheck on the inner Quill editor container
+          if (quillRef.current.root) {
+            quillRef.current.root.setAttribute('spellcheck', 'true');
+          }
+
           if (value) {
             quillRef.current.clipboard.dangerouslyPasteHTML(value);
           }
@@ -182,7 +187,7 @@
             <form onSubmit={handleAuth} className="space-y-4">
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">Email</label>
-                <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500" required />
+                <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500" required spellCheck="true" />
               </div>
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">Password</label>
@@ -515,6 +520,7 @@
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   className="pl-8 pr-8 py-1.5 border border-gray-300 rounded-lg text-xs w-64 bg-white focus:ring-2 focus:ring-blue-500 outline-none font-medium shadow-sm"
+                  spellCheck="true"
                 />
                 {searchQuery && (
                   <button 
@@ -703,6 +709,7 @@
                           value={space.title || ''} 
                           onChange={e => updateTemplateSpace(space.id, 'title', e.target.value)} 
                           placeholder="Template Title" 
+                          spellCheck="true"
                         />
                         <div className="flex items-center gap-2">
                           <button 
@@ -777,6 +784,7 @@
                         className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" 
                         value={currentTask.title || ''} 
                         onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, title: val})); }} 
+                        spellCheck="true"
                       />
                     </div>
                     
@@ -796,7 +804,7 @@
                           </a>
                         )}
                       </div>
-                      <input type="text" className="w-full border border-gray-300 p-2 rounded" value={currentTask.jira_id || ''} onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, jira_id: val})); }} placeholder="Paste Jira URL or ID" />
+                      <input type="text" className="w-full border border-gray-300 p-2 rounded" value={currentTask.jira_id || ''} onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, jira_id: val})); }} placeholder="Paste Jira URL or ID" spellCheck="false" />
                     </div>
 
                     <div className="w-1/4">
@@ -863,6 +871,7 @@
                         placeholder="Free-text note for desktop alert (e.g. Follow up on draft response)..." 
                         value={currentTask.reminder_note || ''} 
                         onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, reminder_note: val})); }} 
+                        spellCheck="true"
                       />
                     </div>
                   </div>
@@ -919,6 +928,7 @@
                       className="w-full border border-blue-200 p-2 rounded h-40 font-mono text-sm bg-white" 
                       value={currentTask.reporter_response || ''} 
                       onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, reporter_response: val})); }}
+                      spellCheck="true"
                     ></textarea>
                   </div>
                 </div>
