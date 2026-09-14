@@ -87,6 +87,7 @@
       title: '', jira_id: '', status: 'To Do', problem: '', searched: '',
       actions: '', notes: '', related_files: '', shelf_pages: '', qa: '',
       is_project: false,
+      live_date: '',
       reminder_date: '',
       reminder_note: '',
       reminder_type: 'Reminder',
@@ -113,7 +114,6 @@
             }
           });
 
-          // Enable spellcheck on the inner Quill editor container
           if (quillRef.current.root) {
             quillRef.current.root.setAttribute('spellcheck', 'true');
           }
@@ -238,7 +238,6 @@
         fetchTemplates();
       }, []);
 
-      // Scroll task modal to top & blur active element so no cursor appears anywhere on open
       useEffect(() => {
         if (isModalOpen) {
           if (modalRef.current) modalRef.current.scrollTop = 0;
@@ -250,7 +249,6 @@
         }
       }, [isModalOpen, currentTask.id]);
 
-      // Reset template modal scroll position when opened
       useEffect(() => {
         if (isTemplateModalOpen) {
           if (templateModalRef.current) templateModalRef.current.scrollTop = 0;
@@ -403,6 +401,7 @@
           shelf_pages: currentTask.shelf_pages || '',
           qa: currentTask.qa || '',
           is_project: !!currentTask.is_project,
+          live_date: currentTask.live_date || null,
           reminder_date: currentTask.reminder_date ? new Date(currentTask.reminder_date).toISOString() : null,
           reminder_note: currentTask.reminder_note || '',
           reminder_type: currentTask.reminder_type || 'Reminder',
@@ -458,6 +457,15 @@
         });
       };
 
+      const formatDateOnly = (dateString) => {
+        if (!dateString) return '';
+        const parts = dateString.split('-');
+        if (parts.length === 3) {
+          return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+        return dateString;
+      };
+
       const formatDatetimeLocal = (isoString) => {
         if (!isoString) return '';
         const d = new Date(isoString);
@@ -481,7 +489,6 @@
       };
 
       const filteredTasks = tasks.filter(task => {
-        // Search Filter (Title or Jira ID)
         if (searchQuery.trim()) {
           const q = searchQuery.toLowerCase();
           const matchesTitle = (task.title || '').toLowerCase().includes(q);
@@ -489,7 +496,6 @@
           if (!matchesTitle && !matchesJira) return false;
         }
 
-        // Status/Category Filter
         if (filterStatus === 'PROJECTS_ONLY') return task.is_project;
         if (filterStatus === 'DUE_TODAY') return getReminderStatus(task.reminder_date) === 'DUE_TODAY';
         if (filterStatus === 'OVERDUE') return getReminderStatus(task.reminder_date) === 'OVERDUE';
@@ -511,7 +517,6 @@
                 </button>
               </div>
 
-              {/* SEARCH BAR FOR ALL TITLES */}
               <div className="relative ml-4">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-2.5 text-gray-400">🔍</span>
                 <input 
@@ -534,7 +539,6 @@
             </div>
 
             <div className="flex items-center gap-3">
-              {/* ICON-ONLY ALERT BUTTON WITH GREEN BACKGROUND WHEN ACTIVE */}
               <button 
                 onClick={requestNotificationAccess} 
                 className={`p-2 rounded-lg shadow font-bold text-sm flex items-center justify-center transition-all ${
@@ -545,7 +549,6 @@
                 🔔
               </button>
 
-              {/* COMPACT FILTER BOARD SELECTOR */}
               <div className="flex items-center gap-1 bg-gray-50 border border-gray-300 rounded-lg p-1 shadow-sm">
                 <span className="text-[10px] font-bold text-gray-600 uppercase tracking-wider pl-1">Filter:</span>
                 <select 
@@ -655,6 +658,13 @@
                           </div>
 
                           <div className="font-semibold text-gray-900 line-clamp-2">{task.title || 'Untitled Task'}</div>
+
+                          {/* TARGET LIVE DATE BADGE */}
+                          {task.live_date && (
+                            <div className="mt-2 text-[11px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded flex items-center gap-1 w-fit">
+                              <span>🚀 Live:</span> {formatDateOnly(task.live_date)}
+                            </div>
+                          )}
 
                           {/* IN-APP DYNAMIC BADGES */}
                           {remStatus === 'OVERDUE' && (
@@ -776,48 +786,59 @@
                   <button onClick={() => setIsModalOpen(false)} className="text-gray-500 hover:text-red-500 font-bold text-xl">✕</button>
                 </div>
                 <div className="space-y-6">
-                  <div className="flex gap-4 items-center">
-                    <div className="flex-1">
-                      <label className="block text-sm font-bold text-gray-700 mb-1">Title</label>
+                  {/* MAIN FIELDS TOP ROW WITH TARGET LIVE DATE */}
+                  <div className="grid grid-cols-12 gap-3 items-end">
+                    <div className="col-span-3">
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Title</label>
                       <input 
                         type="text" 
-                        className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" 
+                        className="w-full border border-gray-300 p-2 rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none" 
                         value={currentTask.title || ''} 
                         onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, title: val})); }} 
                         spellCheck="true"
                       />
                     </div>
                     
-                    {/* JIRA LINK/ID INPUT WITH ICON-ONLY LINK BUTTON */}
-                    <div className="w-1/3">
+                    <div className="col-span-3">
                       <div className="flex justify-between items-center mb-1">
-                        <label className="block text-sm font-bold text-gray-700">Jira Link/ID</label>
+                        <label className="block text-xs font-bold text-gray-700">Jira Link/ID</label>
                         {getFormattedUrl(currentTask.jira_id) && (
                           <a 
                             href={getFormattedUrl(currentTask.jira_id)} 
                             target="_blank" 
                             rel="noopener noreferrer" 
-                            className="text-sm font-bold text-blue-600 hover:text-blue-800 no-underline"
+                            className="text-xs font-bold text-blue-600 hover:text-blue-800 no-underline"
                             title="Open Jira URL"
                           >
                             🔗
                           </a>
                         )}
                       </div>
-                      <input type="text" className="w-full border border-gray-300 p-2 rounded" value={currentTask.jira_id || ''} onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, jira_id: val})); }} placeholder="Paste Jira URL or ID" spellCheck="false" />
+                      <input type="text" className="w-full border border-gray-300 p-2 rounded text-xs" value={currentTask.jira_id || ''} onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, jira_id: val})); }} placeholder="Paste Jira URL or ID" spellCheck="false" />
                     </div>
 
-                    <div className="w-1/4">
-                      <label className="block text-sm font-bold text-gray-700 mb-1">Status</label>
-                      <select className="w-full border border-gray-300 p-2 rounded" value={currentTask.status || 'To Do'} onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, status: val})); }}>
+                    <div className="col-span-2">
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Status</label>
+                      <select className="w-full border border-gray-300 p-2 rounded text-xs" value={currentTask.status || 'To Do'} onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, status: val})); }}>
                         {COLUMNS.map(col => <option key={col} value={col}>{col}</option>)}
                       </select>
                     </div>
-                    <div className="flex items-center gap-2 pt-6">
-                      <label className="flex items-center gap-2 cursor-pointer font-bold text-xs text-red-600 bg-red-50 border border-red-200 px-3 py-2.5 rounded hover:bg-red-100 transition-colors">
+
+                    <div className="col-span-2">
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Target Live Date</label>
+                      <input 
+                        type="date" 
+                        className="w-full border border-gray-300 p-1.5 rounded text-xs bg-white focus:ring-2 focus:ring-blue-500 outline-none" 
+                        value={currentTask.live_date || ''} 
+                        onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, live_date: val})); }} 
+                      />
+                    </div>
+
+                    <div className="col-span-2">
+                      <label className="flex items-center justify-center gap-1.5 cursor-pointer font-bold text-xs text-red-600 bg-red-50 border border-red-200 px-2 py-2 rounded hover:bg-red-100 transition-colors h-[34px]">
                         <input 
                           type="checkbox" 
-                          className="w-4 h-4 text-red-600 rounded focus:ring-red-500 cursor-pointer" 
+                          className="w-3.5 h-3.5 text-red-600 rounded focus:ring-red-500 cursor-pointer" 
                           checked={!!currentTask.is_project} 
                           onChange={e => { const checked = e.target.checked; setCurrentTask(prev => ({...prev, is_project: checked})); }} 
                         />
