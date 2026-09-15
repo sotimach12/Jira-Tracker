@@ -40,6 +40,10 @@
       min-height: 90px;
       font-size: 0.875rem;
     }
+    /* Touch scroll protection */
+    .jira-card {
+      touch-action: pan-y;
+    }
   </style>
 </head>
 <body class="bg-gray-100">
@@ -210,6 +214,7 @@
       const [currentTask, setCurrentTask] = useState(emptyTask);
       const [isLoading, setIsLoading] = useState(true);
       const [copiedId, setCopiedId] = useState(null);
+      const [draggableTaskId, setDraggableTaskId] = useState(null);
       
       const modalRef = useRef(null);
       const templateModalRef = useRef(null);
@@ -487,8 +492,12 @@
         document.body.removeChild(link);
       };
 
-      // DRAG AND DROP HANDLERS WITH MOBILE FRICTION MITIGATION
+      // DRAG AND DROP HANDLERS WITH STRICT DRAG-HANDLE ACTIVATION
       const handleDragStart = (e, taskId) => {
+        if (draggableTaskId !== taskId) {
+          e.preventDefault();
+          return;
+        }
         setDraggedTaskId(taskId);
         e.dataTransfer.setData('text/plain', taskId);
       };
@@ -508,6 +517,7 @@
           await supabase.from('tasks').update({ status: newStatus }).eq('id', id);
         }
         setDraggedTaskId(null);
+        setDraggableTaskId(null);
       };
 
       const fetchTemplates = async () => {
@@ -1005,15 +1015,24 @@
                       return (
                         <div 
                           key={task.id} 
-                          draggable
+                          draggable={draggableTaskId === task.id}
                           onDragStart={e => handleDragStart(e, task.id)}
-                          className={`p-3 sm:p-4 rounded-lg shadow cursor-grab active:cursor-grabbing hover:shadow-lg transition-all transform hover:-translate-y-0.5 ${cardBgStyle}`} 
+                          onDragEnd={() => setDraggableTaskId(null)}
+                          className={`jira-card p-3 sm:p-4 rounded-lg shadow cursor-pointer hover:shadow-lg transition-all transform hover:-translate-y-0.5 ${cardBgStyle}`} 
                           onClick={() => { setCurrentTask(task); setIsModalOpen(true); }}
                         >
                           <div className="flex justify-between items-center mb-2">
                             <div className="flex items-center gap-1.5 truncate max-w-[150px]">
-                              {/* DRAG HANDLE FOR MOBILE PREVENTING ACCIDENTAL SWIPES */}
-                              <span className="text-gray-400 text-xs font-bold mr-1 cursor-grab" title="Hold & drag to move">⋮⋮</span>
+                              {/* STRICT MOBILE DRAG HANDLE */}
+                              <span 
+                                className="text-gray-400 hover:text-gray-600 text-sm font-bold mr-1 cursor-grab active:cursor-grabbing p-1" 
+                                title="Hold & drag to move"
+                                onMouseDown={() => setDraggableTaskId(task.id)}
+                                onTouchStart={() => setDraggableTaskId(task.id)}
+                                onClick={e => e.stopPropagation()}
+                              >
+                                ⋮⋮
+                              </span>
                               {task.is_project && (
                                 <span className="w-2.5 h-2.5 bg-red-600 rounded-full flex-shrink-0 inline-block shadow-sm" title="Important Project"></span>
                               )}
