@@ -193,7 +193,7 @@
       );
     }
 
-    function WorkspaceTracker() {
+    function WorkspaceTracker({ session }) {
       const [tasks, setTasks] = useState([]);
       const [templateSpaces, setTemplateSpaces] = useState([]);
       const [isModalOpen, setIsModalOpen] = useState(false);
@@ -210,15 +210,9 @@
       const templateListRef = useRef(null);
       const menuRef = useRef(null);
 
-      // NON-JIRA QUICK SCRATCHPAD STATE
-      const [quickNotes, setQuickNotes] = useState(() => localStorage.getItem('scratchpad_notes') || '');
-      const [quickTodos, setQuickTodos] = useState(() => {
-        const saved = localStorage.getItem('scratchpad_todos');
-        return saved ? JSON.parse(saved) : [
-          { id: 1, text: 'Review monthly pipeline draft', done: false },
-          { id: 2, text: 'Ping team lead on Slack', done: true }
-        ];
-      });
+      // USER SCRATCHPAD & PREFERENCES (SUPABASE SYNCED)
+      const [quickNotes, setQuickNotes] = useState('');
+      const [quickTodos, setQuickTodos] = useState([]);
       const [newTodoInput, setNewTodoInput] = useState('');
 
       const [searchQuery, setSearchQuery] = useState('');
@@ -228,27 +222,107 @@
         typeof Notification !== 'undefined' ? Notification.permission : 'default'
       );
 
-      const [bgColor, setBgColor] = useState(() => {
-        return localStorage.getItem('tracker_bg') || 'bg-slate-200';
-      });
-
-      const [colColor, setColColor] = useState(() => {
-        return localStorage.getItem('tracker_col') || BASIC_THEME_OPTIONS[0].colValue;
-      });
+      const [bgColor, setBgColor] = useState('bg-slate-200');
+      const [colColor, setColColor] = useState(BASIC_THEME_OPTIONS[0].colValue);
 
       useEffect(() => { 
         fetchTasks(); 
         fetchTemplates();
+        fetchUserData();
       }, []);
 
-      // PERSIST SCRATCHPAD TO LOCALSTORAGE
-      useEffect(() => {
-        localStorage.setItem('scratchpad_notes', quickNotes);
-      }, [quickNotes]);
+      // FETCH USER SCRATCHPAD AND PREFERENCES FROM SUPABASE
+      const fetchUserData = async () => {
+        if (!session?.user) return;
+        const userId = session.user.id;
 
-      useEffect(() => {
-        localStorage.setItem('scratchpad_todos', JSON.stringify(quickTodos));
-      }, [quickTodos]);
+        // Fetch User Scratchpad
+        const { data: padData } = await supabase
+          .from('user_scratchpad')
+          .select('*')
+          .eq('user_id', userId)
+          .single();
+
+        if (padData) {
+          setQuickNotes(padData.notes || '');
+          setQuickTodos(Array.isArray(padData.todos) ? padData.todos : []);
+        }
+
+        // Fetch User Preferences (Themes)
+        const { data: prefData } = await supabase
+          .from('user_preferences')
+          .select('*')
+          .eq('user_id', userId)
+          .single();
+
+        if (prefData) {
+          if (prefData.bg_color) setBgColor(prefData.bg_color);
+          if (prefData.col_color) setColColor(prefData.col_color);
+        }
+      };
+
+      // SAVE SCRATCHPAD TO SUPABASE
+      const saveScratchpadToSupabase = async (newNotes, newTodos) => {
+        if (!session?.user) return;
+        const userId = session.user.id;
+        await supabase.from('user_scratchpad').upsert({
+          user_id: userId,
+          notes: newNotes,
+          todos: newTodos,
+          updated_at: new Date().toISOString()
+        });
+      };
+
+      // SAVE THEME PREFERENCES TO SUPABASE
+      const changeBgColor = async (colorClass) => {
+        setBgColor(colorClass);
+        if (!session?.user) return;
+        await supabase.from('user_preferences').upsert({
+          user_id: session.user.id,
+          bg_color: colorClass,
+          col_color: colColor,
+          updated_at: new Date().toISOString()
+        });
+      };
+
+      const changeColColor = async (colorClass) => {
+        setColColor(colorClass);
+        if (!session?.user) return;
+        await supabase.from('user_preferences').upsert({
+          user_id: session.user.id,
+          bg_color: bgColor,
+          col_color: colorClass,
+          updated_at: new Date().toISOString()
+        });
+      };
+
+      // SCRATCHPAD ACTIONS
+      const handleNotesChange = (e) => {
+        const val = e.target.value;
+        setQuickNotes(val);
+        saveScratchpadToSupabase(val, quickTodos);
+      };
+
+      const addQuickTodo = (e) => {
+        e.preventDefault();
+        if (!newTodoInput.trim()) return;
+        const updated = [...quickTodos, { id: Date.now(), text: newTodoInput.trim(), done: false }];
+        setQuickTodos(updated);
+        setNewTodoInput('');
+        saveScratchpadToSupabase(quickNotes, updated);
+      };
+
+      const toggleQuickTodo = (id) => {
+        const updated = quickTodos.map(t => t.id === id ? { ...t, done: !t.done } : t);
+        setQuickTodos(updated);
+        saveScratchpadToSupabase(quickNotes, updated);
+      };
+
+      const removeQuickTodo = (id) => {
+        const updated = quickTodos.filter(t => t.id !== id);
+        setQuickTodos(updated);
+        saveScratchpadToSupabase(quickNotes, updated);
+      };
 
       // CLOSE MENU WHEN CLICKING OUTSIDE
       useEffect(() => {
@@ -328,32 +402,6 @@
             setTasks(prev => prev.map(t => t.id === task.id ? { ...t, reminders: newReminders } : t));
           }
         }
-      };
-
-      const changeBgColor = (colorClass) => {
-        setBgColor(colorClass);
-        localStorage.setItem('tracker_bg', colorClass);
-      };
-
-      const changeColColor = (colorClass) => {
-        setColColor(colorClass);
-        localStorage.setItem('tracker_col', colorClass);
-      };
-
-      // SCRATCHPAD ACTIONS
-      const addQuickTodo = (e) => {
-        e.preventDefault();
-        if (!newTodoInput.trim()) return;
-        setQuickTodos(prev => [...prev, { id: Date.now(), text: newTodoInput.trim(), done: false }]);
-        setNewTodoInput('');
-      };
-
-      const toggleQuickTodo = (id) => {
-        setQuickTodos(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
-      };
-
-      const removeQuickTodo = (id) => {
-        setQuickTodos(prev => prev.filter(t => t.id !== id));
       };
 
       // MULTI-REMINDER MANAGEMENT
@@ -688,10 +736,10 @@
             <span className="[writing-mode:vertical-lr] rotate-180 tracking-wider uppercase font-semibold">Scratchpad</span>
           </button>
 
-          {/* SLIDE-OUT SCRATCHPAD DRAWER OVERLAY */}
+          {/* SLIDE-OUT SCRATCHPAD DRAWER OVERLAY (FULLY SYNCED TO SUPABASE) */}
           {isNotesDrawerOpen && (
             <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex justify-end">
-              <div className="bg-white w-96 h-full shadow-2xl p-6 flex flex-col space-y-6 animate-in slide-in-from-right duration-200 border-l border-gray-200">
+              <div className="bg-white w-96 h-full shadow-2xl p-6 flex flex-col space-y-6 border-l border-gray-200">
                 <div className="flex justify-between items-center border-b pb-3">
                   <div className="flex items-center gap-2">
                     <span className="text-xl">📝</span>
@@ -709,28 +757,32 @@
                       value={newTodoInput} 
                       onChange={e => setNewTodoInput(e.target.value)}
                       placeholder="Add a task (e.g. Ping Slack)..." 
-                      className="flex-1 border border-gray-300 rounded px-2.5 py-1 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="flex-1 border border-gray-300 rounded px-2.5 py-1 text-xs focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 bg-white"
                     />
                     <button type="submit" className="bg-blue-600 text-white font-bold text-xs px-3 py-1 rounded hover:bg-blue-700">+</button>
                   </form>
 
                   <div className="max-h-44 overflow-y-auto space-y-1.5 pr-1">
-                    {quickTodos.map(todo => (
-                      <div key={todo.id} className="flex items-center justify-between bg-gray-50 p-2 rounded border border-gray-200 text-xs">
-                        <label className="flex items-center gap-2 flex-1 cursor-pointer truncate">
-                          <input 
-                            type="checkbox" 
-                            checked={todo.done} 
-                            onChange={() => toggleQuickTodo(todo.id)} 
-                            className="w-3.5 h-3.5 text-blue-600 rounded"
-                          />
-                          <span className={todo.done ? "line-through text-gray-400 truncate" : "text-gray-800 font-medium truncate"}>
-                            {todo.text}
-                          </span>
-                        </label>
-                        <button onClick={() => removeQuickTodo(todo.id)} className="text-gray-400 hover:text-red-500 font-bold pl-2">✕</button>
-                      </div>
-                    ))}
+                    {quickTodos.length === 0 ? (
+                      <p className="text-xs text-gray-400 italic">No non-Jira tasks added yet.</p>
+                    ) : (
+                      quickTodos.map(todo => (
+                        <div key={todo.id} className="flex items-center justify-between bg-gray-50 p-2 rounded border border-gray-200 text-xs">
+                          <label className="flex items-center gap-2 flex-1 cursor-pointer truncate">
+                            <input 
+                              type="checkbox" 
+                              checked={todo.done} 
+                              onChange={() => toggleQuickTodo(todo.id)} 
+                              className="w-3.5 h-3.5 text-blue-600 rounded"
+                            />
+                            <span className={todo.done ? "line-through text-gray-400 truncate" : "text-gray-800 font-medium truncate"}>
+                              {todo.text}
+                            </span>
+                          </label>
+                          <button onClick={() => removeQuickTodo(todo.id)} className="text-gray-400 hover:text-red-500 font-bold pl-2">✕</button>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
 
@@ -739,14 +791,14 @@
                   <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Raw Quick Notes</h3>
                   <textarea 
                     value={quickNotes}
-                    onChange={e => setQuickNotes(e.target.value)}
+                    onChange={handleNotesChange}
                     placeholder="Paste unformatted links, snippet notes, or draft thoughts here..." 
                     className="flex-1 w-full border border-gray-300 rounded p-3 text-xs bg-amber-50/50 text-gray-800 focus:ring-2 focus:ring-amber-400 outline-none resize-none font-mono leading-relaxed"
                   ></textarea>
                 </div>
 
                 <div className="text-[10px] text-gray-400 text-center italic border-t pt-2">
-                  Auto-saved locally in browser storage.
+                  ☁️ Synced to your Supabase account across all devices.
                 </div>
               </div>
             </div>
@@ -1329,7 +1381,7 @@
         return () => subscription.unsubscribe();
       }, []);
 
-      return !session ? <Auth /> : <WorkspaceTracker />;
+      return !session ? <Auth /> : <WorkspaceTracker session={session} />;
     }
 
     const root = ReactDOM.createRoot(document.getElementById('root'));
