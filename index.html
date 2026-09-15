@@ -221,6 +221,7 @@
 
       const [searchQuery, setSearchQuery] = useState('');
       const [filterStatus, setFilterStatus] = useState('ALL'); 
+      const [draggedTaskId, setDraggedTaskId] = useState(null);
       const [notificationPermission, setNotificationPermission] = useState(
         typeof Notification !== 'undefined' ? Notification.permission : 'default'
       );
@@ -325,6 +326,40 @@
           reminder_note: '',
           reminder_type: 'Reminder'
         }));
+      };
+
+      // EXPORT/BACKUP TO JSON FILE
+      const exportTasksJSON = () => {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(tasks, null, 2));
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", `jira_tracker_backup_${new Date().toISOString().slice(0,10)}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+      };
+
+      // DRAG AND DROP HANDLERS
+      const handleDragStart = (e, taskId) => {
+        setDraggedTaskId(taskId);
+        e.dataTransfer.setData('text/plain', taskId);
+      };
+
+      const handleDragOver = (e) => {
+        e.preventDefault();
+      };
+
+      const handleDrop = async (e, newStatus) => {
+        e.preventDefault();
+        const id = e.dataTransfer.getData('text/plain') || draggedTaskId;
+        if (!id) return;
+
+        const targetTask = tasks.find(t => String(t.id) === String(id));
+        if (targetTask && targetTask.status !== newStatus) {
+          setTasks(prev => prev.map(t => String(t.id) === String(id) ? { ...t, status: newStatus } : t));
+          await supabase.from('tasks').update({ status: newStatus }).eq('id', id);
+        }
+        setDraggedTaskId(null);
       };
 
       const fetchTemplates = async () => {
@@ -488,12 +523,19 @@
         return 'UPCOMING';
       };
 
+      // EXPANDED SEARCH: SEARCHES TITLE, JIRA ID, PROBLEM, ACTIONS, AND NOTES
       const filteredTasks = tasks.filter(task => {
         if (searchQuery.trim()) {
           const q = searchQuery.toLowerCase();
           const matchesTitle = (task.title || '').toLowerCase().includes(q);
           const matchesJira = (task.jira_id || '').toLowerCase().includes(q);
-          if (!matchesTitle && !matchesJira) return false;
+          const matchesProblem = (task.problem || '').toLowerCase().includes(q);
+          const matchesActions = (task.actions || '').toLowerCase().includes(q);
+          const matchesNotes = (task.notes || '').toLowerCase().includes(q);
+
+          if (!matchesTitle && !matchesJira && !matchesProblem && !matchesActions && !matchesNotes) {
+            return false;
+          }
         }
 
         if (filterStatus === 'PROJECTS_ONLY') return task.is_project;
@@ -512,17 +554,17 @@
             <div className="flex items-center gap-4">
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">Jira Tracker</h1>
-                {/* UPDATED LOG OUT TEXT */}
                 <button onClick={() => supabase.auth.signOut()} className="text-sm font-bold text-red-600 hover:text-red-800 mt-1">
                   Log Out
                 </button>
               </div>
 
+              {/* SEARCH BAR FOR ALL FIELDS */}
               <div className="relative ml-4">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-2.5 text-gray-400">🔍</span>
                 <input 
                   type="text" 
-                  placeholder="Search titles or Jira IDs..." 
+                  placeholder="Search titles, IDs, notes, actions..." 
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   className="pl-8 pr-8 py-1.5 border border-gray-300 rounded-lg text-xs w-64 bg-white focus:ring-2 focus:ring-blue-500 outline-none font-medium shadow-sm"
@@ -548,6 +590,14 @@
                 title={notificationPermission === 'granted' ? 'Desktop Alerts Active' : 'Enable Desktop Alerts'}
               >
                 🔔
+              </button>
+
+              <button 
+                onClick={exportTasksJSON}
+                className="bg-slate-700 hover:bg-slate-800 text-white px-2.5 py-1.5 rounded-lg shadow font-bold text-xs flex items-center gap-1 transition-all"
+                title="Export all tasks to a local backup file"
+              >
+                💾 Export
               </button>
 
               <div className="flex items-center gap-1 bg-gray-50 border border-gray-300 rounded-lg p-1 shadow-sm">
@@ -601,23 +651,27 @@
                 <span>📋</span> Templates
               </button>
 
-              {/* UPDATED NEW JIRA BUTTON */}
               <button onClick={() => { setCurrentTask({ ...emptyTask }); setIsModalOpen(true); }} className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 font-bold transition-all text-sm">
                 + New Jira
               </button>
             </div>
           </div>
 
-          {/* COLUMNS WITH FIXED HEIGHT AND VERTICAL SCROLLBAR */}
+          {/* COLUMNS WITH DRAG AND DROP DROPZONES */}
           <div className="flex gap-6 overflow-x-auto pb-4">
             {COLUMNS.map(column => {
               const columnTasks = filteredTasks.filter(t => t.status === column);
               return (
-                <div key={column} className={`rounded-xl p-4 w-80 flex-shrink-0 flex flex-col max-h-[calc(100vh-200px)] border transition-all ${colColor}`}>
+                <div 
+                  key={column} 
+                  onDragOver={handleDragOver}
+                  onDrop={e => handleDrop(e, column)}
+                  className={`rounded-xl p-4 w-80 flex-shrink-0 flex flex-col max-h-[calc(100vh-200px)] border transition-all ${colColor}`}
+                >
                   <h2 className="font-bold mb-4 border-b pb-2 text-sm border-current opacity-90 flex-shrink-0">
                     {column} ({columnTasks.length})
                   </h2>
-                  <div className="space-y-4 overflow-y-auto pr-1.5 flex-1">
+                  <div className="space-y-4 overflow-y-auto pr-1.5 flex-1 min-h-[100px]">
                     {columnTasks.map(task => {
                       const cardUrl = getFormattedUrl(task.jira_id);
                       const remStatus = getReminderStatus(task.reminder_date);
@@ -633,7 +687,9 @@
                       return (
                         <div 
                           key={task.id} 
-                          className={`p-4 rounded-lg shadow cursor-pointer hover:shadow-lg transition-all transform hover:-translate-y-0.5 ${cardBgStyle}`} 
+                          draggable
+                          onDragStart={e => handleDragStart(e, task.id)}
+                          className={`p-4 rounded-lg shadow cursor-grab active:cursor-grabbing hover:shadow-lg transition-all transform hover:-translate-y-0.5 ${cardBgStyle}`} 
                           onClick={() => { setCurrentTask(task); setIsModalOpen(true); }}
                         >
                           <div className="flex justify-between items-center mb-2">
