@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Jira Tracker</title>
 
   <!-- CUSTOM TAB FAVICON (Pushpin Emoji) -->
@@ -13,6 +13,9 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- TOUCH DRAG & DROP POLYFILL FOR MOBILE (iOS Safari / Android Chrome) -->
+  <script src="https://cdn.jsdelivr.net/npm/drag-drop-touch@1.3.0/DragDropTouch.js"></script>
 
   <!-- Quill.js Rich Text Editor CSS & JS -->
   <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
@@ -166,21 +169,21 @@
       };
 
       return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-200">
-          <div className="bg-white p-8 rounded-lg shadow-xl w-96">
-            <h2 className="text-3xl font-bold mb-6 text-center text-gray-800">{isSignUp ? 'Create Account' : 'Welcome Back'}</h2>
+        <div className="flex items-center justify-center min-h-screen bg-gray-200 p-4">
+          <div className="bg-white p-6 sm:p-8 rounded-lg shadow-xl w-full max-w-sm">
+            <h2 className="text-2xl sm:text-3xl font-bold mb-6 text-center text-gray-800">{isSignUp ? 'Create Account' : 'Welcome Back'}</h2>
             {message && <p className="mb-4 text-sm text-center font-bold text-red-600">{message}</p>}
             
             <form onSubmit={handleAuth} className="space-y-4">
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">Email</label>
-                <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500" required spellCheck="true" />
+                <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full border p-2.5 rounded focus:ring-2 focus:ring-blue-500 text-sm" required spellCheck="true" />
               </div>
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">Password</label>
-                <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500" required />
+                <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full border p-2.5 rounded focus:ring-2 focus:ring-blue-500 text-sm" required />
               </div>
-              <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white font-bold p-2 rounded hover:bg-blue-700 mt-4">
+              <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white font-bold p-3 rounded hover:bg-blue-700 mt-4 text-sm">
                 {loading ? 'Processing...' : (isSignUp ? 'Sign Up' : 'Log In')}
               </button>
             </form>
@@ -200,6 +203,9 @@
       const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
       const [isMenuOpen, setIsMenuOpen] = useState(false);
       const [isNotesDrawerOpen, setIsNotesDrawerOpen] = useState(false);
+
+      // MOBILE VIEW TOGGLE (STACKED LIST VS KANBAN SWIPE)
+      const [isMobileStack, setIsMobileStack] = useState(() => window.innerWidth < 768);
 
       const [currentTask, setCurrentTask] = useState(emptyTask);
       const [isLoading, setIsLoading] = useState(true);
@@ -229,6 +235,12 @@
         fetchTasks(); 
         fetchTemplates();
         fetchUserData();
+
+        const handleResize = () => {
+          if (window.innerWidth >= 768) setIsMobileStack(false);
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
       }, []);
 
       // FETCH USER SCRATCHPAD AND PREFERENCES FROM SUPABASE
@@ -724,7 +736,7 @@
       if (isLoading) return <div className="p-8 text-xl font-bold text-gray-700">Loading Your Secure Jira Tracker...</div>;
 
       return (
-        <div className={`min-h-screen p-8 font-sans transition-colors duration-300 ${bgColor} relative overflow-x-hidden`}>
+        <div className={`min-h-screen p-3 sm:p-8 font-sans transition-colors duration-300 ${bgColor} relative overflow-x-hidden`}>
           
           {/* FLOATING SIDE SCRATCHPAD BUTTON */}
           <button 
@@ -733,17 +745,17 @@
             title="Open Personal Scratchpad & Non-Jira Tasks"
           >
             <span className="text-base">📝</span>
-            <span className="[writing-mode:vertical-lr] rotate-180 tracking-wider uppercase font-semibold">Scratchpad</span>
+            <span className="[writing-mode:vertical-lr] rotate-180 tracking-wider uppercase font-semibold text-[10px]">Scratchpad</span>
           </button>
 
-          {/* SLIDE-OUT SCRATCHPAD DRAWER OVERLAY (FULLY SYNCED TO SUPABASE) */}
+          {/* SLIDE-OUT SCRATCHPAD DRAWER OVERLAY */}
           {isNotesDrawerOpen && (
             <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex justify-end">
-              <div className="bg-white w-96 h-full shadow-2xl p-6 flex flex-col space-y-6 border-l border-gray-200">
+              <div className="bg-white w-80 sm:w-96 h-full shadow-2xl p-4 sm:p-6 flex flex-col space-y-6 border-l border-gray-200">
                 <div className="flex justify-between items-center border-b pb-3">
                   <div className="flex items-center gap-2">
                     <span className="text-xl">📝</span>
-                    <h2 className="text-xl font-bold text-gray-900">Personal Scratchpad</h2>
+                    <h2 className="text-lg sm:text-xl font-bold text-gray-900">Personal Scratchpad</h2>
                   </div>
                   <button onClick={() => setIsNotesDrawerOpen(false)} className="text-gray-400 hover:text-red-500 font-bold text-xl">✕</button>
                 </div>
@@ -805,24 +817,24 @@
           )}
 
           {/* HEADER BAR SHARES THE COLUMN THEME */}
-          <div className={`flex justify-between items-center mb-8 p-4 rounded-xl shadow-lg border gap-4 transition-all ${colColor}`}>
-            <div className="flex items-center gap-4">
+          <div className={`flex flex-col md:flex-row justify-between items-stretch md:items-center mb-6 p-3 sm:p-4 rounded-xl shadow-lg border gap-3 transition-all ${colColor}`}>
+            <div className="flex items-center justify-between md:justify-start gap-2 sm:gap-4">
               <div>
-                <h1 className="text-3xl font-bold">Jira Tracker</h1>
-                <button onClick={() => supabase.auth.signOut()} className="text-sm font-bold text-red-500 hover:text-red-700 mt-1">
+                <h1 className="text-xl sm:text-3xl font-bold">Jira Tracker</h1>
+                <button onClick={() => supabase.auth.signOut()} className="text-xs font-bold text-red-500 hover:text-red-700 mt-0.5">
                   Log Out
                 </button>
               </div>
 
               {/* SEARCH BAR FOR ALL FIELDS */}
-              <div className="relative ml-4">
+              <div className="relative flex-1 max-w-[180px] sm:max-w-xs ml-2">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-2.5 text-gray-400">🔍</span>
                 <input 
                   type="text" 
-                  placeholder="Search titles, IDs, notes, months..." 
+                  placeholder="Search titles, IDs..." 
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  className={`pl-8 pr-8 py-1.5 border rounded-lg text-xs w-64 focus:ring-2 focus:ring-blue-500 outline-none font-medium shadow-sm ${
+                  className={`w-full pl-8 pr-7 py-1.5 border rounded-lg text-xs focus:ring-2 focus:ring-blue-500 outline-none font-medium shadow-sm ${
                     isDarkMode ? 'bg-slate-900 border-slate-700 text-slate-100' : 'bg-white border-gray-300 text-gray-900'
                   }`}
                   spellCheck="true"
@@ -830,7 +842,7 @@
                 {searchQuery && (
                   <button 
                     onClick={() => setSearchQuery('')}
-                    className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-xs font-bold text-gray-400 hover:text-red-500"
+                    className="absolute inset-y-0 right-0 pr-2 flex items-center text-xs font-bold text-gray-400 hover:text-red-500"
                   >
                     ✕
                   </button>
@@ -838,118 +850,131 @@
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between md:justify-end gap-2">
               
-              {/* CLEAN 3-LINES HAMBURGER MENU DROPDOWN */}
-              <div className="relative" ref={menuRef}>
-                <button 
-                  onClick={() => setIsMenuOpen(!isMenuOpen)} 
-                  className={`p-2 rounded-lg shadow font-bold text-lg flex items-center justify-center transition-all border ${
-                    isDarkMode ? 'bg-slate-800 border-slate-700 hover:bg-slate-700 text-white' : 'bg-white border-gray-300 hover:bg-gray-100 text-gray-800'
-                  }`}
-                  title="Tools & Settings Menu"
-                >
-                  ☰
-                </button>
-
-                {/* HAMBURGER DROPDOWN CONTENT */}
-                {isMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-50 text-gray-900 space-y-4 text-xs font-medium">
-                    
-                    {/* ALERTS & EXPORT ACTIONS */}
-                    <div className="flex items-center justify-between border-b pb-3">
-                      <span className="font-bold text-gray-700">Actions</span>
-                      <div className="flex items-center gap-2">
-                        <button 
-                          onClick={() => { requestNotificationAccess(); setIsMenuOpen(false); }} 
-                          className={`p-1.5 rounded shadow font-bold text-xs flex items-center gap-1 ${
-                            notificationPermission === 'granted' ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'
-                          }`}
-                          title="Alerts"
-                        >
-                          🔔 Alerts
-                        </button>
-
-                        <button 
-                          onClick={() => { exportTasksCSV(); setIsMenuOpen(false); }}
-                          className="p-1.5 rounded shadow font-bold text-xs bg-black hover:bg-gray-800 text-white flex items-center gap-1"
-                          title="Export CSV"
-                        >
-                          💾 Export
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* FILTER OPTIONS */}
-                    <div className="space-y-1">
-                      <label className="block font-bold text-gray-600 text-[10px] uppercase tracking-wider">Status Filter</label>
-                      <select 
-                        value={filterStatus} 
-                        onChange={e => { setFilterStatus(e.target.value); setIsMenuOpen(false); }}
-                        className="w-full border border-gray-300 rounded p-1.5 font-bold bg-white outline-none cursor-pointer"
-                      >
-                        <option value="ALL">All ({activeTasksCount})</option>
-                        <option value="DUE_TODAY">📅 Today ({tasks.filter(t => (t.reminders || []).some(r => getReminderStatus(r.date) === 'DUE_TODAY')).length})</option>
-                        <option value="OVERDUE">⚠️ Overdue ({tasks.filter(t => (t.reminders || []).some(r => getReminderStatus(r.date) === 'OVERDUE')).length})</option>
-                        <option value="TYPE_DUE_DATE">📅 Due Dates ({tasks.filter(t => (t.reminders || []).some(r => r.type === 'Due Date')).length})</option>
-                        <option value="TYPE_FOLLOWUP">📌 Follow-ups ({tasks.filter(t => (t.reminders || []).some(r => r.type === 'Follow-up')).length})</option>
-                        <option value="PROJECTS_ONLY">📌 Projects ({tasks.filter(t => t.is_project).length})</option>
-                      </select>
-                    </div>
-
-                    {/* THEMES OPTIONS */}
-                    <div className="space-y-2 border-t pt-3">
-                      <label className="block font-bold text-gray-600 text-[10px] uppercase tracking-wider">Appearance</label>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[11px] font-bold text-gray-700">Page Theme:</span>
-                        <select 
-                          value={bgColor} 
-                          onChange={e => changeBgColor(e.target.value)}
-                          className="border border-gray-300 rounded p-1 text-xs bg-white font-medium outline-none cursor-pointer w-32"
-                        >
-                          {BASIC_THEME_OPTIONS.map(c => (
-                            <option key={c.name} value={c.bgValue}>{c.name}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[11px] font-bold text-gray-700">Columns Theme:</span>
-                        <select 
-                          value={colColor} 
-                          onChange={e => changeColColor(e.target.value)}
-                          className="border border-gray-300 rounded p-1 text-xs bg-white font-medium outline-none cursor-pointer w-32"
-                        >
-                          {BASIC_THEME_OPTIONS.map(c => (
-                            <option key={c.name} value={c.colValue}>{c.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* TEMPLATES POPUP */}
-                    <div className="border-t pt-3">
-                      <button 
-                        onClick={() => { setIsTemplateModalOpen(true); setIsMenuOpen(false); }} 
-                        className="w-full bg-indigo-600 text-white p-2 rounded shadow hover:bg-indigo-700 font-bold transition-all text-xs flex items-center justify-center gap-1.5"
-                      >
-                        <span>📋</span> Open Templates Manager
-                      </button>
-                    </div>
-
-                  </div>
-                )}
-              </div>
-
-              {/* NEW JIRA BUTTON STAYS OUTSIDE THE MENU */}
-              <button onClick={() => { setCurrentTask({ ...emptyTask }); setIsModalOpen(true); }} className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 font-bold transition-all text-sm">
-                + New Jira
+              {/* MOBILE VIEW LAYOUT TOGGLE (STACKED LIST VS KANBAN SWIPE) */}
+              <button 
+                onClick={() => setIsMobileStack(!isMobileStack)}
+                className={`md:hidden px-2.5 py-1.5 rounded-lg text-xs font-bold border flex items-center gap-1 ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-200' : 'bg-white border-gray-300 text-gray-800'
+                }`}
+                title="Toggle Mobile View"
+              >
+                <span>{isMobileStack ? '📱 Stacked' : '↔️ Kanban'}</span>
               </button>
+
+              <div className="flex items-center gap-2">
+                {/* CLEAN 3-LINES HAMBURGER MENU DROPDOWN */}
+                <div className="relative" ref={menuRef}>
+                  <button 
+                    onClick={() => setIsMenuOpen(!isMenuOpen)} 
+                    className={`p-2 rounded-lg shadow font-bold text-base sm:text-lg flex items-center justify-center transition-all border ${
+                      isDarkMode ? 'bg-slate-800 border-slate-700 hover:bg-slate-700 text-white' : 'bg-white border-gray-300 hover:bg-gray-100 text-gray-800'
+                    }`}
+                    title="Tools & Settings Menu"
+                  >
+                    ☰
+                  </button>
+
+                  {/* HAMBURGER DROPDOWN CONTENT */}
+                  {isMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-50 text-gray-900 space-y-4 text-xs font-medium">
+                      
+                      {/* ALERTS & EXPORT ACTIONS */}
+                      <div className="flex items-center justify-between border-b pb-3">
+                        <span className="font-bold text-gray-700">Actions</span>
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => { requestNotificationAccess(); setIsMenuOpen(false); }} 
+                            className={`p-1.5 rounded shadow font-bold text-xs flex items-center gap-1 ${
+                              notificationPermission === 'granted' ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'
+                            }`}
+                            title="Alerts"
+                          >
+                            🔔 Alerts
+                          </button>
+
+                          <button 
+                            onClick={() => { exportTasksCSV(); setIsMenuOpen(false); }}
+                            className="p-1.5 rounded shadow font-bold text-xs bg-black hover:bg-gray-800 text-white flex items-center gap-1"
+                            title="Export CSV"
+                          >
+                            💾 Export
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* FILTER OPTIONS */}
+                      <div className="space-y-1">
+                        <label className="block font-bold text-gray-600 text-[10px] uppercase tracking-wider">Status Filter</label>
+                        <select 
+                          value={filterStatus} 
+                          onChange={e => { setFilterStatus(e.target.value); setIsMenuOpen(false); }}
+                          className="w-full border border-gray-300 rounded p-1.5 font-bold bg-white outline-none cursor-pointer text-xs"
+                        >
+                          <option value="ALL">All ({activeTasksCount})</option>
+                          <option value="DUE_TODAY">📅 Today ({tasks.filter(t => (t.reminders || []).some(r => getReminderStatus(r.date) === 'DUE_TODAY')).length})</option>
+                          <option value="OVERDUE">⚠️ Overdue ({tasks.filter(t => (t.reminders || []).some(r => getReminderStatus(r.date) === 'OVERDUE')).length})</option>
+                          <option value="TYPE_DUE_DATE">📅 Due Dates ({tasks.filter(t => (t.reminders || []).some(r => r.type === 'Due Date')).length})</option>
+                          <option value="TYPE_FOLLOWUP">📌 Follow-ups ({tasks.filter(t => (t.reminders || []).some(r => r.type === 'Follow-up')).length})</option>
+                          <option value="PROJECTS_ONLY">📌 Projects ({tasks.filter(t => t.is_project).length})</option>
+                        </select>
+                      </div>
+
+                      {/* THEMES OPTIONS */}
+                      <div className="space-y-2 border-t pt-3">
+                        <label className="block font-bold text-gray-600 text-[10px] uppercase tracking-wider">Appearance</label>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[11px] font-bold text-gray-700">Page Theme:</span>
+                          <select 
+                            value={bgColor} 
+                            onChange={e => changeBgColor(e.target.value)}
+                            className="border border-gray-300 rounded p-1 text-xs bg-white font-medium outline-none cursor-pointer w-32"
+                          >
+                            {BASIC_THEME_OPTIONS.map(c => (
+                              <option key={c.name} value={c.bgValue}>{c.name}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[11px] font-bold text-gray-700">Columns Theme:</span>
+                          <select 
+                            value={colColor} 
+                            onChange={e => changeColColor(e.target.value)}
+                            className="border border-gray-300 rounded p-1 text-xs bg-white font-medium outline-none cursor-pointer w-32"
+                          >
+                            {BASIC_THEME_OPTIONS.map(c => (
+                              <option key={c.name} value={c.colValue}>{c.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* TEMPLATES POPUP */}
+                      <div className="border-t pt-3">
+                        <button 
+                          onClick={() => { setIsTemplateModalOpen(true); setIsMenuOpen(false); }} 
+                          className="w-full bg-indigo-600 text-white p-2 rounded shadow hover:bg-indigo-700 font-bold transition-all text-xs flex items-center justify-center gap-1.5"
+                        >
+                          <span>📋</span> Open Templates Manager
+                        </button>
+                      </div>
+
+                    </div>
+                  )}
+                </div>
+
+                {/* NEW JIRA BUTTON STAYS OUTSIDE THE MENU */}
+                <button onClick={() => { setCurrentTask({ ...emptyTask }); setIsModalOpen(true); }} className="bg-blue-600 text-white px-3 sm:px-4 py-2 rounded shadow hover:bg-blue-700 font-bold transition-all text-xs sm:text-sm">
+                  + New Jira
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* COLUMNS WITH DRAG AND DROP DROPZONES */}
-          <div className="flex gap-6 overflow-x-auto pb-4">
+          {/* COLUMNS DISPLAY: RESPONSIVE STACK FOR MOBILE OR SWIPEABLE KANBAN FOR DESKTOP */}
+          <div className={isMobileStack ? "flex flex-col gap-6" : "flex gap-4 sm:gap-6 overflow-x-auto pb-4"}>
             {COLUMNS.map(column => {
               const columnTasks = filteredTasks.filter(t => t.status === column);
               return (
@@ -957,12 +982,14 @@
                   key={column} 
                   onDragOver={handleDragOver}
                   onDrop={e => handleDrop(e, column)}
-                  className={`rounded-xl p-4 w-80 flex-shrink-0 flex flex-col max-h-[calc(100vh-200px)] border transition-all ${colColor}`}
+                  className={`rounded-xl p-3 sm:p-4 border transition-all ${
+                    isMobileStack ? "w-full" : "w-80 flex-shrink-0 flex flex-col max-h-[calc(100vh-200px)]"
+                  } ${colColor}`}
                 >
-                  <h2 className="font-bold mb-4 border-b pb-2 text-sm border-current opacity-90 flex-shrink-0">
+                  <h2 className="font-bold mb-3 border-b pb-2 text-xs sm:text-sm border-current opacity-90 flex-shrink-0">
                     {column} ({columnTasks.length})
                   </h2>
-                  <div className="space-y-4 overflow-y-auto pr-1.5 flex-1 min-h-[100px]">
+                  <div className="space-y-3 overflow-y-auto pr-1 flex-1 min-h-[60px]">
                     {columnTasks.map(task => {
                       const cardUrl = getFormattedUrl(task.jira_id);
                       const remindersList = task.reminders || [];
@@ -980,7 +1007,7 @@
                           key={task.id} 
                           draggable
                           onDragStart={e => handleDragStart(e, task.id)}
-                          className={`p-4 rounded-lg shadow cursor-grab active:cursor-grabbing hover:shadow-lg transition-all transform hover:-translate-y-0.5 ${cardBgStyle}`} 
+                          className={`p-3 sm:p-4 rounded-lg shadow cursor-grab active:cursor-grabbing hover:shadow-lg transition-all transform hover:-translate-y-0.5 ${cardBgStyle}`} 
                           onClick={() => { setCurrentTask(task); setIsModalOpen(true); }}
                         >
                           <div className="flex justify-between items-center mb-2">
@@ -1006,7 +1033,7 @@
                             <span className="text-[10px] text-gray-500 font-medium">{formatDate(task.created_at)}</span>
                           </div>
 
-                          <div className="font-semibold text-gray-900 line-clamp-2">{task.title || 'Untitled Task'}</div>
+                          <div className="font-semibold text-gray-900 text-xs sm:text-sm line-clamp-2">{task.title || 'Untitled Task'}</div>
 
                           {/* PIPELINE MONTH BADGE */}
                           {task.pipeline_month && (
@@ -1017,7 +1044,7 @@
 
                           {/* TARGET LIVE DATE BADGE */}
                           {task.live_date && (
-                            <div className="mt-1.5 text-[11px] font-bold border border-emerald-300 bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded flex items-center gap-1 w-fit">
+                            <div className="mt-1.5 text-[10px] sm:text-[11px] font-bold border border-emerald-300 bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded flex items-center gap-1 w-fit">
                               <span>🚀 Live:</span> {formatDateOnly(task.live_date)}
                             </div>
                           )}
@@ -1063,42 +1090,42 @@
 
           {/* TEMPLATES MANAGER MODAL WINDOW */}
           {isTemplateModalOpen && (
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-              <div ref={templateModalRef} className="rounded-xl w-full max-w-3xl max-h-[85vh] overflow-y-auto p-6 shadow-2xl space-y-6 border bg-white border-gray-200 text-gray-900">
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50">
+              <div ref={templateModalRef} className="rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-6 border bg-white border-gray-200 text-gray-900">
                 <div className="flex justify-between items-center border-b pb-3 border-gray-200">
                   <div>
-                    <h2 className="text-2xl font-bold">Saved Template Spaces</h2>
-                    <p className="text-xs mt-1 text-gray-500">Saved directly in your Supabase database. Paste images (Ctrl+V) & copy content instantly.</p>
+                    <h2 className="text-xl sm:text-2xl font-bold">Saved Template Spaces</h2>
+                    <p className="text-[11px] sm:text-xs mt-0.5 text-gray-500">Saved directly in your Supabase database. Paste images & copy text instantly.</p>
                   </div>
                   <button onClick={() => setIsTemplateModalOpen(false)} className="text-gray-400 hover:text-red-500 font-bold text-xl">✕</button>
                 </div>
 
-                <div ref={templateListRef} className="space-y-6 max-h-[55vh] overflow-y-auto pr-2">
+                <div ref={templateListRef} className="space-y-4 sm:space-y-6 max-h-[55vh] overflow-y-auto pr-1">
                   {templateSpaces.map((space) => (
-                    <div key={space.id} className="p-4 border rounded-lg space-y-3 relative shadow-sm bg-gray-50 border-gray-200">
-                      <div className="flex justify-between items-center gap-4">
+                    <div key={space.id} className="p-3 sm:p-4 border rounded-lg space-y-3 relative shadow-sm bg-gray-50 border-gray-200">
+                      <div className="flex justify-between items-center gap-2">
                         <input 
                           type="text" 
-                          className="font-bold border rounded px-2.5 py-1 text-sm flex-1 focus:ring-2 focus:ring-blue-500 outline-none bg-white border-gray-300 text-gray-800" 
+                          className="font-bold border rounded px-2.5 py-1 text-xs sm:text-sm flex-1 focus:ring-2 focus:ring-blue-500 outline-none bg-white border-gray-300 text-gray-800" 
                           value={space.title || ''} 
                           onChange={e => updateTemplateSpace(space.id, 'title', e.target.value)} 
                           placeholder="Template Title" 
                           spellCheck="true"
                         />
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
                           <button 
                             type="button" 
                             onClick={() => copyTemplateText(space)} 
-                            className={`text-white text-xs font-bold px-3 py-1.5 rounded shadow-sm transition-all ${
+                            className={`text-white text-xs font-bold px-2.5 py-1 rounded shadow-sm transition-all ${
                               copiedId === space.id ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-blue-600 hover:bg-blue-700'
                             }`}
                           >
-                            {copiedId === space.id ? 'Copied! ✓' : 'Copy Text'}
+                            {copiedId === space.id ? 'Copied! ✓' : 'Copy'}
                           </button>
                           <button 
                             type="button" 
                             onClick={() => removeTemplateSpace(space.id)} 
-                            className="text-red-500 hover:text-red-700 font-bold text-sm px-1.5" 
+                            className="text-red-500 hover:text-red-700 font-bold text-sm px-1" 
                             title="Remove Space"
                           >
                             ✕
@@ -1121,9 +1148,9 @@
                 <div className="flex justify-between items-center border-t pt-4 border-gray-200">
                   <button 
                     onClick={addTemplateSpace} 
-                    className="bg-indigo-600 text-white text-xs font-bold px-4 py-2 rounded hover:bg-indigo-700 shadow-sm transition-all"
+                    className="bg-indigo-600 text-white text-xs font-bold px-3 py-2 rounded hover:bg-indigo-700 shadow-sm transition-all"
                   >
-                    + Add Template Space
+                    + Add Template
                   </button>
                   <button 
                     onClick={() => setIsTemplateModalOpen(false)} 
@@ -1138,21 +1165,21 @@
 
           {/* TASK DOCUMENT MODAL WINDOW - ALWAYS CLASSIC SLATE LIGHT */}
           {isModalOpen && (
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-              <div ref={modalRef} className="rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl border bg-white border-gray-200 text-gray-900">
-                <div className="flex justify-between items-center mb-6 border-b pb-4 border-gray-200">
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50">
+              <div ref={modalRef} className="rounded-xl w-full max-w-4xl max-h-[92vh] overflow-y-auto p-4 sm:p-6 shadow-2xl border bg-white border-gray-200 text-gray-900">
+                <div className="flex justify-between items-center mb-4 sm:mb-6 border-b pb-3 sm:pb-4 border-gray-200">
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-900">Document Template</h2>
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Document Template</h2>
                     {currentTask.created_at && (
-                      <p className="text-xs mt-1 text-gray-500">Created: {formatDate(currentTask.created_at)}</p>
+                      <p className="text-[10px] sm:text-xs mt-0.5 text-gray-500">Created: {formatDate(currentTask.created_at)}</p>
                     )}
                   </div>
                   <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-red-500 font-bold text-xl">✕</button>
                 </div>
-                <div className="space-y-6">
-                  {/* MAIN FIELDS TOP ROW WITH PIPELINE MONTH & NATIVE DATE PICKER */}
-                  <div className="grid grid-cols-12 gap-3 items-end">
-                    <div className="col-span-3">
+                <div className="space-y-4 sm:space-y-6">
+                  {/* MAIN FIELDS RESPONSIVE GRID */}
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+                    <div className="sm:col-span-3">
                       <label className="block text-xs font-bold mb-1 text-gray-700">Title</label>
                       <input 
                         type="text" 
@@ -1163,7 +1190,7 @@
                       />
                     </div>
                     
-                    <div className="col-span-3">
+                    <div className="sm:col-span-3">
                       <div className="flex justify-between items-center mb-1">
                         <label className="block text-xs font-bold text-gray-700">Jira Link/ID</label>
                         {getFormattedUrl(currentTask.jira_id) && (
@@ -1188,7 +1215,7 @@
                       />
                     </div>
 
-                    <div className="col-span-2">
+                    <div className="sm:col-span-2">
                       <label className="block text-xs font-bold mb-1 text-gray-700">Status</label>
                       <select 
                         className="w-full border p-2 rounded text-xs bg-white border-gray-300 text-gray-900" 
@@ -1200,7 +1227,7 @@
                     </div>
 
                     {/* PIPELINE MONTH SELECTOR */}
-                    <div className="col-span-2">
+                    <div className="sm:col-span-2">
                       <label className="block text-xs font-bold mb-1 text-gray-700">Pipeline Month</label>
                       <select 
                         className="w-full border p-1.5 rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer bg-white border-gray-300 text-gray-900" 
@@ -1213,7 +1240,7 @@
                     </div>
 
                     {/* TARGET LIVE DATE */}
-                    <div className="col-span-2">
+                    <div className="sm:col-span-2">
                       <label className="block text-xs font-bold mb-1 text-gray-700">Target Live Date</label>
                       <input 
                         type="date" 
@@ -1238,15 +1265,15 @@
                   </div>
 
                   {/* MULTI-REMINDER SECTION */}
-                  <div className="p-4 border rounded-lg space-y-3 bg-purple-50 border-purple-200">
+                  <div className="p-3 sm:p-4 border rounded-lg space-y-3 bg-purple-50 border-purple-200">
                     <div className="flex justify-between items-center">
-                      <label className="block text-sm font-bold flex items-center gap-1.5 text-purple-900">
-                        <span>🔔</span> Scheduled Reminders & Deadlines ({(currentTask.reminders || []).length})
+                      <label className="block text-xs sm:text-sm font-bold flex items-center gap-1.5 text-purple-900">
+                        <span>🔔</span> Reminders & Deadlines ({(currentTask.reminders || []).length})
                       </label>
                       <button 
                         type="button" 
                         onClick={addReminder} 
-                        className="text-xs bg-purple-700 text-white font-bold px-3 py-1.5 rounded hover:bg-purple-800 transition-all shadow-sm"
+                        className="text-xs bg-purple-700 text-white font-bold px-2.5 py-1 rounded hover:bg-purple-800 transition-all shadow-sm"
                       >
                         + Add Reminder
                       </button>
@@ -1257,42 +1284,46 @@
                     ) : (
                       <div className="space-y-2">
                         {(currentTask.reminders || []).map((rem, idx) => (
-                          <div key={rem.id || idx} className="flex gap-2 items-center bg-white p-2 border border-purple-200 rounded">
-                            <select 
-                              value={rem.type || 'Reminder'} 
-                              onChange={e => updateReminder(rem.id, 'type', e.target.value)}
-                              className="border rounded px-2 py-1 text-xs font-bold bg-white border-purple-300 text-purple-950 outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer"
-                            >
-                              <option value="Reminder">🕒 Reminder</option>
-                              <option value="Due Date">📅 Due Date</option>
-                              <option value="Follow-up">📌 Follow-up</option>
-                              <option value="Other">📝 Other</option>
-                            </select>
+                          <div key={rem.id || idx} className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center bg-white p-2 border border-purple-200 rounded">
+                            <div className="flex gap-2 items-center">
+                              <select 
+                                value={rem.type || 'Reminder'} 
+                                onChange={e => updateReminder(rem.id, 'type', e.target.value)}
+                                className="border rounded px-2 py-1 text-xs font-bold bg-white border-purple-300 text-purple-950 outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer"
+                              >
+                                <option value="Reminder">🕒 Reminder</option>
+                                <option value="Due Date">📅 Due Date</option>
+                                <option value="Follow-up">📌 Follow-up</option>
+                                <option value="Other">📝 Other</option>
+                              </select>
 
-                            <input 
-                              type="datetime-local" 
-                              className="w-2/5 border p-1.5 rounded text-xs focus:ring-2 focus:ring-purple-500 outline-none font-medium cursor-pointer bg-white border-purple-300 text-gray-900" 
-                              value={formatDatetimeLocal(rem.date)} 
-                              onChange={e => updateReminder(rem.id, 'date', e.target.value)} 
-                            />
+                              <input 
+                                type="datetime-local" 
+                                className="flex-1 border p-1 rounded text-xs focus:ring-2 focus:ring-purple-500 outline-none font-medium cursor-pointer bg-white border-purple-300 text-gray-900" 
+                                value={formatDatetimeLocal(rem.date)} 
+                                onChange={e => updateReminder(rem.id, 'date', e.target.value)} 
+                              />
+                            </div>
 
-                            <input 
-                              type="text" 
-                              className="flex-1 border p-1.5 rounded text-xs focus:ring-2 focus:ring-purple-500 outline-none bg-white border-purple-300 text-gray-900" 
-                              placeholder="Free-text note for alert..." 
-                              value={rem.note || ''} 
-                              onChange={e => updateReminder(rem.id, 'note', e.target.value)} 
-                              spellCheck="true"
-                            />
+                            <div className="flex gap-2 items-center flex-1">
+                              <input 
+                                type="text" 
+                                className="flex-1 border p-1 rounded text-xs focus:ring-2 focus:ring-purple-500 outline-none bg-white border-purple-300 text-gray-900" 
+                                placeholder="Free-text note..." 
+                                value={rem.note || ''} 
+                                onChange={e => updateReminder(rem.id, 'note', e.target.value)} 
+                                spellCheck="true"
+                              />
 
-                            <button 
-                              type="button" 
-                              onClick={() => removeReminder(rem.id)} 
-                              className="text-xs text-red-600 hover:text-red-800 font-bold px-1.5"
-                              title="Delete this reminder"
-                            >
-                              ✕
-                            </button>
+                              <button 
+                                type="button" 
+                                onClick={() => removeReminder(rem.id)} 
+                                className="text-xs text-red-600 hover:text-red-800 font-bold px-1.5"
+                                title="Delete this reminder"
+                              >
+                                ✕
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -1300,55 +1331,55 @@
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold mb-1 text-gray-700">What's The Problem Or Task</label>
+                    <label className="block text-xs sm:text-sm font-bold mb-1 text-gray-700">What's The Problem Or Task</label>
                     <RichEditor id="editor-problem" value={currentTask.problem || ''} onChange={val => setCurrentTask(prev => ({...prev, problem: val}))} />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold mb-1 text-gray-700">Where I Searched</label>
+                    <label className="block text-xs sm:text-sm font-bold mb-1 text-gray-700">Where I Searched</label>
                     <RichEditor id="editor-searched" value={currentTask.searched || ''} onChange={val => setCurrentTask(prev => ({...prev, searched: val}))} />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold mb-1 text-gray-700">Actions</label>
+                    <label className="block text-xs sm:text-sm font-bold mb-1 text-gray-700">Actions</label>
                     <RichEditor id="editor-actions" value={currentTask.actions || ''} onChange={val => setCurrentTask(prev => ({...prev, actions: val}))} />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-bold mb-1 text-gray-700">Notes</label>
+                      <label className="block text-xs sm:text-sm font-bold mb-1 text-gray-700">Notes</label>
                       <RichEditor id="editor-notes" value={currentTask.notes || ''} onChange={val => setCurrentTask(prev => ({...prev, notes: val}))} />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-bold mb-1 text-gray-700">Related Files</label>
+                      <label className="block text-xs sm:text-sm font-bold mb-1 text-gray-700">Related Files</label>
                       <RichEditor id="editor-related" value={currentTask.related_files || ''} onChange={val => setCurrentTask(prev => ({...prev, related_files: val}))} />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold mb-1 text-gray-700">Shelf Pages That Need Content</label>
+                    <label className="block text-xs sm:text-sm font-bold mb-1 text-gray-700">Shelf Pages That Need Content</label>
                     <RichEditor id="editor-shelf" value={currentTask.shelf_pages || ''} onChange={val => setCurrentTask(prev => ({...prev, shelf_pages: val}))} />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold mb-1 text-gray-700">Questions & Answers</label>
+                    <label className="block text-xs sm:text-sm font-bold mb-1 text-gray-700">Questions & Answers</label>
                     <RichEditor id="editor-qa" value={currentTask.qa || ''} onChange={val => setCurrentTask(prev => ({...prev, qa: val}))} />
                   </div>
 
-                  <div className="p-4 border rounded bg-blue-50 border-blue-200">
+                  <div className="p-3 sm:p-4 border rounded bg-blue-50 border-blue-200">
                     <div className="flex justify-between items-center mb-2">
-                      <label className="block text-sm font-bold text-blue-800">Response To Reporter</label>
+                      <label className="block text-xs sm:text-sm font-bold text-blue-800">Response To Reporter</label>
                       <button 
                         type="button" 
                         onClick={appendNewResponse} 
-                        className="text-xs bg-blue-600 text-white font-bold px-2.5 py-1 rounded hover:bg-blue-700 transition-all shadow-sm"
+                        className="text-[10px] sm:text-xs bg-blue-600 text-white font-bold px-2 py-1 rounded hover:bg-blue-700 transition-all shadow-sm"
                       >
-                        + Append Another Response
+                        + Append Response
                       </button>
                     </div>
                     <textarea 
-                      className="w-full border p-2 rounded h-40 font-mono text-sm bg-white border-blue-200 text-gray-900" 
+                      className="w-full border p-2 rounded h-32 sm:h-40 font-mono text-xs sm:text-sm bg-white border-blue-200 text-gray-900" 
                       value={currentTask.reporter_response || ''} 
                       onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, reporter_response: val})); }}
                       spellCheck="true"
@@ -1356,14 +1387,14 @@
                   </div>
                 </div>
 
-                <div className="mt-6 flex gap-4 border-t pt-4 border-gray-200">
+                <div className="mt-6 flex gap-3 border-t pt-4 border-gray-200">
                   {currentTask.id && (
-                    <button onClick={deleteTask} className="px-4 py-2 bg-red-100 text-red-700 font-bold rounded hover:bg-red-200 mr-auto">
-                      Delete Task
+                    <button onClick={deleteTask} className="px-3 sm:px-4 py-2 bg-red-100 text-red-700 font-bold rounded hover:bg-red-200 mr-auto text-xs sm:text-sm">
+                      Delete
                     </button>
                   )}
-                  <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 rounded font-bold ml-auto text-gray-600 hover:bg-gray-100">Cancel</button>
-                  <button onClick={saveTask} className="px-6 py-2 bg-green-600 text-white font-bold rounded hover:bg-green-700">Save Task</button>
+                  <button onClick={() => setIsModalOpen(false)} className="px-3 sm:px-4 py-2 rounded font-bold ml-auto text-gray-600 hover:bg-gray-100 text-xs sm:text-sm">Cancel</button>
+                  <button onClick={saveTask} className="px-4 sm:px-6 py-2 bg-green-600 text-white font-bold rounded hover:bg-green-700 text-xs sm:text-sm">Save Task</button>
                 </div>
               </div>
             </div>
