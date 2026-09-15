@@ -618,6 +618,7 @@
             </div>
 
             <div className="flex items-center gap-3">
+              {/* ICON-ONLY ALERT BUTTON */}
               <button 
                 onClick={requestNotificationAccess} 
                 className={`p-2 rounded-lg shadow font-bold text-sm flex items-center justify-center transition-all ${
@@ -628,13 +629,13 @@
                 🔔
               </button>
 
-              {/* EXCEL EXPORT BUTTON */}
+              {/* ICON-ONLY EXCEL EXPORT BUTTON MATCHING BELL SIZE */}
               <button 
                 onClick={exportTasksCSV}
-                className="bg-emerald-700 hover:bg-emerald-800 text-white px-2.5 py-1.5 rounded-lg shadow font-bold text-xs flex items-center gap-1 transition-all"
+                className="p-2 rounded-lg shadow font-bold text-sm flex items-center justify-center bg-emerald-700 hover:bg-emerald-800 text-white transition-all"
                 title="Export all tasks directly into an Excel spreadsheet"
               >
-                📊 Excel Export
+                📊
               </button>
 
               <div className="flex items-center gap-1 bg-gray-50 border border-gray-300 rounded-lg p-1 shadow-sm">
