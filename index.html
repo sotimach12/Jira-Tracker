@@ -788,7 +788,7 @@
           {/* SLIDE-OUT SCRATCHPAD DRAWER OVERLAY */}
           {isNotesDrawerOpen && (
             <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex justify-end">
-              <div className="bg-white w-80 sm:w-96 h-full shadow-2xl p-4 sm:p-6 flex flex-col space-y-6 border-l border-gray-200">
+              <div className="bg-white w-80 sm:w-96 h-full shadow-2xl p-4 sm:p-6 flex flex-col space-y-6 border-l border-gray-200 overflow-x-hidden">
                 <div className="flex justify-between items-center border-b pb-3">
                   <div className="flex items-center gap-2">
                     <span className="text-xl">📝</span>
@@ -798,7 +798,7 @@
                 </div>
 
                 {/* QUICK NON-JIRA TO-DO LIST WITH AUTO-EXPANDING TEXTAREA */}
-                <div className="space-y-3">
+                <div className="space-y-3 min-w-0">
                   <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Quick Non-Jira Tasks</h3>
                   <form onSubmit={addQuickTodo} className="flex flex-col gap-2">
                     <textarea 
@@ -806,20 +806,20 @@
                       onChange={e => setNewTodoInput(e.target.value)}
                       placeholder="Add task (e.g. Ping Slack)..." 
                       rows="2"
-                      className="w-full border border-gray-300 rounded p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 bg-white resize-y font-sans leading-relaxed"
+                      className="w-full border border-gray-300 rounded p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 bg-white resize-y font-sans leading-relaxed break-words"
                     />
                     <div className="flex gap-2 items-center">
                       <input 
                         type="date" 
                         value={newTodoDueDate} 
                         onChange={e => setNewTodoInputDueDate(e.target.value)}
-                        className="flex-1 border border-gray-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 outline-none text-gray-800 bg-white font-medium"
+                        className="flex-1 min-w-0 border border-gray-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 outline-none text-gray-800 bg-white font-medium"
                       />
-                      <button type="submit" className="bg-blue-600 text-white font-bold text-xs px-3 py-1.5 rounded hover:bg-blue-700 shadow-sm">+ Add Task</button>
+                      <button type="submit" className="bg-blue-600 text-white font-bold text-xs px-3 py-1.5 rounded hover:bg-blue-700 shadow-sm shrink-0">+ Add Task</button>
                     </div>
                   </form>
 
-                  <div className="max-h-52 overflow-y-auto space-y-2 pr-1">
+                  <div className="max-h-52 overflow-y-auto space-y-2 pr-1 min-w-0">
                     {quickTodos.length === 0 ? (
                       <p className="text-xs text-gray-400 italic">No non-Jira tasks added yet.</p>
                     ) : (
@@ -828,21 +828,21 @@
                         return (
                           <div 
                             key={todo.id} 
-                            className={`flex items-start justify-between p-2 rounded border text-xs transition-all ${
+                            className={`flex items-start justify-between p-2 rounded border text-xs transition-all min-w-0 ${
                               isUrgent 
                                 ? 'bg-red-50 border-red-300 text-red-950 font-semibold' 
                                 : 'bg-gray-50 border-gray-200 text-gray-800'
                             }`}
                           >
-                            <label className="flex items-start gap-2 flex-1 cursor-pointer">
+                            <label className="flex items-start gap-2 flex-1 cursor-pointer min-w-0">
                               <input 
                                 type="checkbox" 
                                 checked={todo.done} 
                                 onChange={() => toggleQuickTodo(todo.id)} 
-                                className="w-3.5 h-3.5 text-blue-600 rounded mt-0.5"
+                                className="w-3.5 h-3.5 text-blue-600 rounded mt-0.5 shrink-0"
                               />
                               <div className="flex flex-col flex-1 min-w-0">
-                                <span className={`break-words whitespace-pre-wrap ${todo.done ? "line-through text-gray-400" : ""}`}>
+                                <span className={`break-all whitespace-pre-wrap ${todo.done ? "line-through text-gray-400" : ""}`}>
                                   {todo.text}
                                 </span>
                                 {todo.dueDate && (
@@ -854,7 +854,7 @@
                                 )}
                               </div>
                             </label>
-                            <button onClick={() => removeQuickTodo(todo.id)} className="text-gray-400 hover:text-red-500 font-bold pl-2">✕</button>
+                            <button onClick={() => removeQuickTodo(todo.id)} className="text-gray-400 hover:text-red-500 font-bold pl-2 shrink-0">✕</button>
                           </div>
                         );
                       })
@@ -863,13 +863,13 @@
                 </div>
 
                 {/* FREEFORM NOTES TEXTAREA */}
-                <div className="flex-1 flex flex-col space-y-2">
+                <div className="flex-1 flex flex-col space-y-2 min-w-0">
                   <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Raw Quick Notes</h3>
                   <textarea 
                     value={quickNotes}
                     onChange={handleNotesChange}
                     placeholder="Paste unformatted links, snippet notes, or draft thoughts here..." 
-                    className="flex-1 w-full border border-gray-300 rounded p-3 text-xs bg-amber-50/50 text-gray-800 focus:ring-2 focus:ring-amber-400 outline-none resize-none font-mono leading-relaxed"
+                    className="flex-1 w-full border border-gray-300 rounded p-3 text-xs bg-amber-50/50 text-gray-800 focus:ring-2 focus:ring-amber-400 outline-none resize-none font-mono leading-relaxed break-words"
                   ></textarea>
                 </div>
 
@@ -1380,10 +1380,10 @@
                               />
                             </div>
 
-                            <div className="flex gap-2 items-start flex-1">
+                            <div className="flex gap-2 items-start flex-1 min-w-0">
                               <textarea 
                                 rows="2"
-                                className="flex-1 border p-1.5 rounded text-xs focus:ring-2 focus:ring-purple-500 outline-none bg-white border-purple-300 text-gray-900 resize-y font-sans leading-relaxed" 
+                                className="flex-1 border p-1.5 rounded text-xs focus:ring-2 focus:ring-purple-500 outline-none bg-white border-purple-300 text-gray-900 resize-y font-sans leading-relaxed break-words min-w-0" 
                                 placeholder="Free-text note..." 
                                 value={rem.note || ''} 
                                 onChange={e => updateReminder(rem.id, 'note', e.target.value)} 
@@ -1393,7 +1393,7 @@
                               <button 
                                 type="button" 
                                 onClick={() => removeReminder(rem.id)} 
-                                className="text-xs text-red-600 hover:text-red-800 font-bold px-1.5 pt-1"
+                                className="text-xs text-red-600 hover:text-red-800 font-bold px-1.5 pt-1 shrink-0"
                                 title="Delete this reminder"
                               >
                                 ✕
