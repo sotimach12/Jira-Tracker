@@ -37,27 +37,6 @@
       min-height: 90px;
       font-size: 0.875rem;
     }
-
-    /* Soft Dark Mode Quill Editor Adjustments */
-    .theme-dark .ql-toolbar.ql-snow {
-      background-color: #334155;
-      border-color: #475569;
-      color: #f8fafc;
-    }
-    .theme-dark .ql-container.ql-snow {
-      background-color: #1e293b;
-      border-color: #475569;
-      color: #f8fafc;
-    }
-    .theme-dark .ql-stroke {
-      stroke: #cbd5e1 !important;
-    }
-    .theme-dark .ql-fill {
-      fill: #cbd5e1 !important;
-    }
-    .theme-dark .ql-picker {
-      color: #cbd5e1 !important;
-    }
   </style>
 </head>
 <body class="bg-gray-100">
@@ -82,7 +61,7 @@
       'Done/Closed': 'border-lime-400'
     };
 
-    // BASIC THEME OPTIONS WITH SOFT DARK SLATE
+    // BASIC THEME OPTIONS
     const BASIC_THEME_OPTIONS = [
       { name: 'Classic Slate', bgValue: 'bg-slate-200', colValue: 'bg-slate-100 border-slate-300 text-slate-900' },
       { name: 'Pure Light', bgValue: 'bg-gray-100', colValue: 'bg-white border-gray-300 text-gray-900 shadow-md' },
@@ -832,28 +811,22 @@
           {/* TEMPLATES MANAGER MODAL WINDOW */}
           {isTemplateModalOpen && (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-              <div ref={templateModalRef} className={`rounded-xl w-full max-w-3xl max-h-[85vh] overflow-y-auto p-6 shadow-2xl space-y-6 border ${
-                isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-gray-200 text-gray-900'
-              }`}>
-                <div className="flex justify-between items-center border-b pb-3 border-current opacity-80">
+              <div ref={templateModalRef} className="rounded-xl w-full max-w-3xl max-h-[85vh] overflow-y-auto p-6 shadow-2xl space-y-6 border bg-white border-gray-200 text-gray-900">
+                <div className="flex justify-between items-center border-b pb-3 border-gray-200">
                   <div>
                     <h2 className="text-2xl font-bold">Saved Template Spaces</h2>
-                    <p className={`text-xs mt-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Saved directly in your Supabase database. Paste images (Ctrl+V) & copy content instantly.</p>
+                    <p className="text-xs mt-1 text-gray-500">Saved directly in your Supabase database. Paste images (Ctrl+V) & copy content instantly.</p>
                   </div>
                   <button onClick={() => setIsTemplateModalOpen(false)} className="text-gray-400 hover:text-red-500 font-bold text-xl">✕</button>
                 </div>
 
                 <div ref={templateListRef} className="space-y-6 max-h-[55vh] overflow-y-auto pr-2">
                   {templateSpaces.map((space) => (
-                    <div key={space.id} className={`p-4 border rounded-lg space-y-3 relative shadow-sm ${
-                      isDarkMode ? 'bg-slate-950 border-slate-800' : 'bg-gray-50 border-gray-200'
-                    }`}>
+                    <div key={space.id} className="p-4 border rounded-lg space-y-3 relative shadow-sm bg-gray-50 border-gray-200">
                       <div className="flex justify-between items-center gap-4">
                         <input 
                           type="text" 
-                          className={`font-bold border rounded px-2.5 py-1 text-sm flex-1 focus:ring-2 focus:ring-blue-500 outline-none ${
-                            isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-gray-300 text-gray-800'
-                          }`} 
+                          className="font-bold border rounded px-2.5 py-1 text-sm flex-1 focus:ring-2 focus:ring-blue-500 outline-none bg-white border-gray-300 text-gray-800" 
                           value={space.title || ''} 
                           onChange={e => updateTemplateSpace(space.id, 'title', e.target.value)} 
                           placeholder="Template Title" 
@@ -892,7 +865,7 @@
                   ))}
                 </div>
 
-                <div className="flex justify-between items-center border-t pt-4 border-current opacity-80">
+                <div className="flex justify-between items-center border-t pt-4 border-gray-200">
                   <button 
                     onClick={addTemplateSpace} 
                     className="bg-indigo-600 text-white text-xs font-bold px-4 py-2 rounded hover:bg-indigo-700 shadow-sm transition-all"
@@ -901,9 +874,7 @@
                   </button>
                   <button 
                     onClick={() => setIsTemplateModalOpen(false)} 
-                    className={`text-xs font-bold px-4 py-2 rounded transition-all ${
-                      isDarkMode ? 'bg-slate-800 text-slate-200 hover:bg-slate-700' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-                    }`}
+                    className="text-xs font-bold px-4 py-2 rounded transition-all bg-gray-200 text-gray-800 hover:bg-gray-300"
                   >
                     Close
                   </button>
@@ -912,17 +883,15 @@
             </div>
           )}
 
-          {/* TASK DOCUMENT MODAL WINDOW */}
+          {/* TASK DOCUMENT MODAL WINDOW - ALWAYS CLASSIC SLATE LIGHT */}
           {isModalOpen && (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-              <div ref={modalRef} className={`rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl border ${
-                isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-gray-200 text-gray-900'
-              }`}>
-                <div className="flex justify-between items-center mb-6 border-b pb-4 border-current opacity-80">
+              <div ref={modalRef} className="rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl border bg-white border-gray-200 text-gray-900">
+                <div className="flex justify-between items-center mb-6 border-b pb-4 border-gray-200">
                   <div>
-                    <h2 className="text-2xl font-bold">Document Template</h2>
+                    <h2 className="text-2xl font-bold text-gray-900">Document Template</h2>
                     {currentTask.created_at && (
-                      <p className={`text-xs mt-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Created: {formatDate(currentTask.created_at)}</p>
+                      <p className="text-xs mt-1 text-gray-500">Created: {formatDate(currentTask.created_at)}</p>
                     )}
                   </div>
                   <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-red-500 font-bold text-xl">✕</button>
@@ -931,12 +900,10 @@
                   {/* MAIN FIELDS TOP ROW WITH PIPELINE MONTH & NATIVE DATE PICKER */}
                   <div className="grid grid-cols-12 gap-3 items-end">
                     <div className="col-span-3">
-                      <label className={`block text-xs font-bold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>Title</label>
+                      <label className="block text-xs font-bold mb-1 text-gray-700">Title</label>
                       <input 
                         type="text" 
-                        className={`w-full border p-2 rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none ${
-                          isDarkMode ? 'bg-slate-950 border-slate-800 text-slate-100' : 'bg-white border-gray-300 text-gray-900'
-                        }`} 
+                        className="w-full border p-2 rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none bg-white border-gray-300 text-gray-900" 
                         value={currentTask.title || ''} 
                         onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, title: val})); }} 
                         spellCheck="true"
@@ -945,13 +912,13 @@
                     
                     <div className="col-span-3">
                       <div className="flex justify-between items-center mb-1">
-                        <label className={`block text-xs font-bold ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>Jira Link/ID</label>
+                        <label className="block text-xs font-bold text-gray-700">Jira Link/ID</label>
                         {getFormattedUrl(currentTask.jira_id) && (
                           <a 
                             href={getFormattedUrl(currentTask.jira_id)} 
                             target="_blank" 
                             rel="noopener noreferrer" 
-                            className="text-xs font-bold text-blue-500 hover:text-blue-400 no-underline"
+                            className="text-xs font-bold text-blue-600 hover:text-blue-800 no-underline"
                             title="Open Jira URL"
                           >
                             🔗
@@ -960,9 +927,7 @@
                       </div>
                       <input 
                         type="text" 
-                        className={`w-full border p-2 rounded text-xs ${
-                          isDarkMode ? 'bg-slate-950 border-slate-800 text-slate-100' : 'bg-white border-gray-300 text-gray-900'
-                        }`} 
+                        className="w-full border p-2 rounded text-xs bg-white border-gray-300 text-gray-900" 
                         value={currentTask.jira_id || ''} 
                         onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, jira_id: val})); }} 
                         placeholder="Paste Jira URL or ID" 
@@ -971,11 +936,9 @@
                     </div>
 
                     <div className="col-span-2">
-                      <label className={`block text-xs font-bold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>Status</label>
+                      <label className="block text-xs font-bold mb-1 text-gray-700">Status</label>
                       <select 
-                        className={`w-full border p-2 rounded text-xs ${
-                          isDarkMode ? 'bg-slate-950 border-slate-800 text-slate-100' : 'bg-white border-gray-300 text-gray-900'
-                        }`} 
+                        className="w-full border p-2 rounded text-xs bg-white border-gray-300 text-gray-900" 
                         value={currentTask.status || 'To Do'} 
                         onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, status: val})); }}
                       >
@@ -985,11 +948,9 @@
 
                     {/* PIPELINE MONTH SELECTOR */}
                     <div className="col-span-2">
-                      <label className={`block text-xs font-bold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>Pipeline Month</label>
+                      <label className="block text-xs font-bold mb-1 text-gray-700">Pipeline Month</label>
                       <select 
-                        className={`w-full border p-1.5 rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer ${
-                          isDarkMode ? 'bg-slate-950 border-slate-800 text-slate-100' : 'bg-white border-gray-300 text-gray-900'
-                        }`} 
+                        className="w-full border p-1.5 rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer bg-white border-gray-300 text-gray-900" 
                         value={currentTask.pipeline_month || ''} 
                         onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, pipeline_month: val})); }}
                       >
@@ -1000,12 +961,10 @@
 
                     {/* TARGET LIVE DATE */}
                     <div className="col-span-2">
-                      <label className={`block text-xs font-bold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>Target Live Date</label>
+                      <label className="block text-xs font-bold mb-1 text-gray-700">Target Live Date</label>
                       <input 
                         type="date" 
-                        className={`w-full border p-1.5 rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none font-medium cursor-pointer ${
-                          isDarkMode ? 'bg-slate-950 border-slate-800 text-slate-100' : 'bg-white border-gray-300 text-gray-900'
-                        }`} 
+                        className="w-full border p-1.5 rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none font-medium cursor-pointer bg-white border-gray-300 text-gray-900" 
                         value={currentTask.live_date || ''} 
                         onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, live_date: val})); }} 
                       />
@@ -1014,9 +973,7 @@
 
                   {/* PROJECT CHECKBOX ROW */}
                   <div className="flex justify-end">
-                    <label className={`flex items-center gap-1.5 cursor-pointer font-bold text-xs text-red-500 border border-red-500/30 px-3 py-1.5 rounded hover:bg-red-500/10 transition-colors ${
-                      isDarkMode ? 'bg-red-950/40' : 'bg-red-50'
-                    }`}>
+                    <label className="flex items-center gap-1.5 cursor-pointer font-bold text-xs text-red-600 border border-red-200 px-3 py-1.5 rounded hover:bg-red-100 transition-colors bg-red-50">
                       <input 
                         type="checkbox" 
                         className="w-3.5 h-3.5 text-red-600 rounded focus:ring-red-500 cursor-pointer" 
@@ -1028,24 +985,18 @@
                   </div>
 
                   {/* REMINDER CATEGORY & NATIVE DATETIME PICKER WITH CLOCK/CALENDAR */}
-                  <div className={`p-4 border rounded-lg space-y-3 ${
-                    isDarkMode ? 'bg-purple-950/40 border-purple-800' : 'bg-purple-50 border-purple-200'
-                  }`}>
+                  <div className="p-4 border rounded-lg space-y-3 bg-purple-50 border-purple-200">
                     <div className="flex justify-between items-center">
-                      <label className={`block text-sm font-bold flex items-center gap-1.5 ${
-                        isDarkMode ? 'text-purple-300' : 'text-purple-900'
-                      }`}>
+                      <label className="block text-sm font-bold flex items-center gap-1.5 text-purple-900">
                         <span>🔔</span> Set Scheduled Reminder / Due Date
                       </label>
                       <div className="flex items-center gap-3">
                         <div className="flex items-center gap-2">
-                          <span className={`text-xs font-bold ${isDarkMode ? 'text-purple-300' : 'text-purple-900'}`}>Type:</span>
+                          <span className="text-xs font-bold text-purple-900">Type:</span>
                           <select 
                             value={currentTask.reminder_type || 'Reminder'} 
                             onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, reminder_type: val})); }}
-                            className={`border rounded px-2 py-1 text-xs font-bold outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer ${
-                              isDarkMode ? 'bg-slate-900 border-purple-800 text-purple-200' : 'bg-white border-purple-300 text-purple-950'
-                            }`}
+                            className="border rounded px-2 py-1 text-xs font-bold outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer bg-white border-purple-300 text-purple-950"
                           >
                             <option value="Reminder">🕒 Reminder</option>
                             <option value="Due Date">📅 Due Date</option>
@@ -1068,17 +1019,13 @@
                     <div className="flex gap-3">
                       <input 
                         type="datetime-local" 
-                        className={`w-1/3 border p-2 rounded text-xs focus:ring-2 focus:ring-purple-500 outline-none font-medium cursor-pointer ${
-                          isDarkMode ? 'bg-slate-950 border-purple-800 text-slate-100' : 'bg-white border-purple-300 text-gray-900'
-                        }`} 
+                        className="w-1/3 border p-2 rounded text-xs focus:ring-2 focus:ring-purple-500 outline-none font-medium cursor-pointer bg-white border-purple-300 text-gray-900" 
                         value={formatDatetimeLocal(currentTask.reminder_date)} 
                         onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, reminder_date: val})); }} 
                       />
                       <input 
                         type="text" 
-                        className={`flex-1 border p-2 rounded text-xs focus:ring-2 focus:ring-purple-500 outline-none ${
-                          isDarkMode ? 'bg-slate-950 border-purple-800 text-slate-100' : 'bg-white border-purple-300 text-gray-900'
-                        }`} 
+                        className="flex-1 border p-2 rounded text-xs focus:ring-2 focus:ring-purple-500 outline-none bg-white border-purple-300 text-gray-900" 
                         placeholder="Free-text note for desktop alert (e.g. Follow up on draft response)..." 
                         value={currentTask.reminder_note || ''} 
                         onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, reminder_note: val})); }} 
@@ -1088,47 +1035,45 @@
                   </div>
 
                   <div>
-                    <label className={`block text-sm font-bold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>What's The Problem Or Task</label>
+                    <label className="block text-sm font-bold mb-1 text-gray-700">What's The Problem Or Task</label>
                     <RichEditor id="editor-problem" value={currentTask.problem || ''} onChange={val => setCurrentTask(prev => ({...prev, problem: val}))} />
                   </div>
 
                   <div>
-                    <label className={`block text-sm font-bold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>Where I Searched</label>
+                    <label className="block text-sm font-bold mb-1 text-gray-700">Where I Searched</label>
                     <RichEditor id="editor-searched" value={currentTask.searched || ''} onChange={val => setCurrentTask(prev => ({...prev, searched: val}))} />
                   </div>
 
                   <div>
-                    <label className={`block text-sm font-bold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>Actions</label>
+                    <label className="block text-sm font-bold mb-1 text-gray-700">Actions</label>
                     <RichEditor id="editor-actions" value={currentTask.actions || ''} onChange={val => setCurrentTask(prev => ({...prev, actions: val}))} />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className={`block text-sm font-bold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>Notes</label>
+                      <label className="block text-sm font-bold mb-1 text-gray-700">Notes</label>
                       <RichEditor id="editor-notes" value={currentTask.notes || ''} onChange={val => setCurrentTask(prev => ({...prev, notes: val}))} />
                     </div>
 
                     <div>
-                      <label className={`block text-sm font-bold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>Related Files</label>
+                      <label className="block text-sm font-bold mb-1 text-gray-700">Related Files</label>
                       <RichEditor id="editor-related" value={currentTask.related_files || ''} onChange={val => setCurrentTask(prev => ({...prev, related_files: val}))} />
                     </div>
                   </div>
 
                   <div>
-                    <label className={`block text-sm font-bold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>Shelf Pages That Need Content</label>
+                    <label className="block text-sm font-bold mb-1 text-gray-700">Shelf Pages That Need Content</label>
                     <RichEditor id="editor-shelf" value={currentTask.shelf_pages || ''} onChange={val => setCurrentTask(prev => ({...prev, shelf_pages: val}))} />
                   </div>
 
                   <div>
-                    <label className={`block text-sm font-bold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>Questions & Answers</label>
+                    <label className="block text-sm font-bold mb-1 text-gray-700">Questions & Answers</label>
                     <RichEditor id="editor-qa" value={currentTask.qa || ''} onChange={val => setCurrentTask(prev => ({...prev, qa: val}))} />
                   </div>
 
-                  <div className={`p-4 border rounded ${
-                    isDarkMode ? 'bg-blue-950/40 border-blue-800' : 'bg-blue-50 border-blue-200'
-                  }`}>
+                  <div className="p-4 border rounded bg-blue-50 border-blue-200">
                     <div className="flex justify-between items-center mb-2">
-                      <label className={`block text-sm font-bold ${isDarkMode ? 'text-blue-300' : 'text-blue-800'}`}>Response To Reporter</label>
+                      <label className="block text-sm font-bold text-blue-800">Response To Reporter</label>
                       <button 
                         type="button" 
                         onClick={appendNewResponse} 
@@ -1138,9 +1083,7 @@
                       </button>
                     </div>
                     <textarea 
-                      className={`w-full border p-2 rounded h-40 font-mono text-sm ${
-                        isDarkMode ? 'bg-slate-950 border-blue-800 text-slate-100' : 'bg-white border-blue-200 text-gray-900'
-                      }`} 
+                      className="w-full border p-2 rounded h-40 font-mono text-sm bg-white border-blue-200 text-gray-900" 
                       value={currentTask.reporter_response || ''} 
                       onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, reporter_response: val})); }}
                       spellCheck="true"
@@ -1148,15 +1091,13 @@
                   </div>
                 </div>
 
-                <div className="mt-6 flex gap-4 border-t pt-4 border-current opacity-80">
+                <div className="mt-6 flex gap-4 border-t pt-4 border-gray-200">
                   {currentTask.id && (
                     <button onClick={deleteTask} className="px-4 py-2 bg-red-100 text-red-700 font-bold rounded hover:bg-red-200 mr-auto">
                       Delete Task
                     </button>
                   )}
-                  <button onClick={() => setIsModalOpen(false)} className={`px-4 py-2 rounded font-bold ml-auto ${
-                    isDarkMode ? 'text-slate-300 hover:bg-slate-800' : 'text-gray-600 hover:bg-gray-100'
-                  }`}>Cancel</button>
+                  <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 rounded font-bold ml-auto text-gray-600 hover:bg-gray-100">Cancel</button>
                   <button onClick={saveTask} className="px-6 py-2 bg-green-600 text-white font-bold rounded hover:bg-green-700">Save Task</button>
                 </div>
               </div>
