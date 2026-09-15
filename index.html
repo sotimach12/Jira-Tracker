@@ -37,6 +37,27 @@
       min-height: 90px;
       font-size: 0.875rem;
     }
+
+    /* Dark Mode Quill Editor Adjustments */
+    .theme-dark .ql-toolbar.ql-snow {
+      background-color: #1f2937;
+      border-color: #374151;
+      color: #f3f4f6;
+    }
+    .theme-dark .ql-container.ql-snow {
+      background-color: #111827;
+      border-color: #374151;
+      color: #f3f4f6;
+    }
+    .theme-dark .ql-stroke {
+      stroke: #d1d5db !important;
+    }
+    .theme-dark .ql-fill {
+      fill: #d1d5db !important;
+    }
+    .theme-dark .ql-picker {
+      color: #d1d5db !important;
+    }
   </style>
 </head>
 <body class="bg-gray-100">
@@ -61,13 +82,14 @@
       'Done/Closed': 'border-lime-400'
     };
 
-    // SIMPLIFIED 5 BASIC THEME OPTIONS
+    // BASIC THEME OPTIONS INCLUDING OLED DARK
     const BASIC_THEME_OPTIONS = [
       { name: 'Classic Slate', bgValue: 'bg-slate-200', colValue: 'bg-slate-100 border-slate-300 text-slate-900' },
       { name: 'Pure Light', bgValue: 'bg-gray-100', colValue: 'bg-white border-gray-300 text-gray-900 shadow-md' },
       { name: 'Mint Emerald', bgValue: 'bg-emerald-100', colValue: 'bg-emerald-50 border-emerald-300 text-emerald-950' },
       { name: 'Warm Sunset', bgValue: 'bg-amber-100', colValue: 'bg-amber-50 border-amber-300 text-amber-950' },
-      { name: 'Indigo Velvet', bgValue: 'bg-indigo-600', colValue: 'bg-indigo-700 border-indigo-500 text-white shadow-lg' }
+      { name: 'Indigo Velvet', bgValue: 'bg-indigo-600', colValue: 'bg-indigo-700 border-indigo-500 text-white shadow-lg' },
+      { name: 'OLED Dark', bgValue: 'bg-gray-950 text-gray-100 theme-dark', colValue: 'bg-gray-900 border-gray-800 text-gray-100 shadow-xl' }
     ];
 
     const emptyTask = {
@@ -572,15 +594,19 @@
         return true;
       });
 
+      const isDarkMode = bgColor.includes('theme-dark');
+
       if (isLoading) return <div className="p-8 text-xl font-bold text-gray-700">Loading Your Secure Jira Tracker...</div>;
 
       return (
         <div className={`min-h-screen p-8 font-sans transition-colors duration-300 ${bgColor}`}>
-          <div className="flex justify-between items-center mb-8 bg-white/90 backdrop-blur-md p-4 rounded-xl shadow-lg border border-white/20 gap-4">
+          <div className={`flex justify-between items-center mb-8 backdrop-blur-md p-4 rounded-xl shadow-lg border gap-4 ${
+            isDarkMode ? 'bg-gray-900/90 border-gray-800 text-white' : 'bg-white/90 border-white/20 text-gray-900'
+          }`}>
             <div className="flex items-center gap-4">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">Jira Tracker</h1>
-                <button onClick={() => supabase.auth.signOut()} className="text-sm font-bold text-red-600 hover:text-red-800 mt-1">
+                <h1 className="text-3xl font-bold">Jira Tracker</h1>
+                <button onClick={() => supabase.auth.signOut()} className="text-sm font-bold text-red-500 hover:text-red-700 mt-1">
                   Log Out
                 </button>
               </div>
@@ -593,7 +619,9 @@
                   placeholder="Search titles, IDs, notes, months..." 
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  className="pl-8 pr-8 py-1.5 border border-gray-300 rounded-lg text-xs w-64 bg-white focus:ring-2 focus:ring-blue-500 outline-none font-medium shadow-sm"
+                  className={`pl-8 pr-8 py-1.5 border rounded-lg text-xs w-64 focus:ring-2 focus:ring-blue-500 outline-none font-medium shadow-sm ${
+                    isDarkMode ? 'bg-gray-950 border-gray-800 text-gray-100' : 'bg-white border-gray-300 text-gray-900'
+                  }`}
                   spellCheck="true"
                 />
                 {searchQuery && (
@@ -622,18 +650,24 @@
               {/* BLACK FLOPPY DISK SAVE/EXPORT BUTTON */}
               <button 
                 onClick={exportTasksCSV}
-                className="p-2 rounded-lg shadow font-bold text-sm flex items-center justify-center bg-black hover:bg-gray-800 text-white transition-all"
+                className="p-2 rounded-lg shadow font-bold text-sm flex items-center justify-center bg-black hover:bg-gray-800 text-white transition-all border border-gray-700"
                 title="Export all tasks directly into an Excel spreadsheet"
               >
                 💾
               </button>
 
-              <div className="flex items-center gap-1 bg-gray-50 border border-gray-300 rounded-lg p-1 shadow-sm">
-                <span className="text-[10px] font-bold text-gray-600 uppercase tracking-wider pl-1">Filter:</span>
+              <div className={`flex items-center gap-1 border rounded-lg p-1 shadow-sm ${
+                isDarkMode ? 'bg-gray-950 border-gray-800' : 'bg-gray-50 border-gray-300'
+              }`}>
+                <span className={`text-[10px] font-bold uppercase tracking-wider pl-1 ${
+                  isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                }`}>Filter:</span>
                 <select 
                   value={filterStatus} 
                   onChange={e => setFilterStatus(e.target.value)}
-                  className="border border-gray-300 rounded px-1.5 py-0.5 text-[11px] bg-white font-bold focus:ring-1 focus:ring-blue-500 outline-none cursor-pointer max-w-[130px]"
+                  className={`border rounded px-1.5 py-0.5 text-[11px] font-bold focus:ring-1 focus:ring-blue-500 outline-none cursor-pointer max-w-[130px] ${
+                    isDarkMode ? 'bg-gray-900 border-gray-800 text-gray-100' : 'bg-white border-gray-300 text-gray-900'
+                  }`}
                 >
                   <option value="ALL">All ({tasks.length})</option>
                   <option value="DUE_TODAY">📅 Today ({tasks.filter(t => getReminderStatus(t.reminder_date) === 'DUE_TODAY').length})</option>
@@ -644,14 +678,18 @@
                 </select>
               </div>
 
-              {/* SIMPLIFIED 5 BASIC THEME CONTROLS */}
+              {/* SIMPLIFIED 6 THEME CONTROLS */}
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[10px] font-bold text-gray-700 uppercase tracking-wider">Page Theme:</span>
+                  <span className={`text-[10px] font-bold uppercase tracking-wider ${
+                    isDarkMode ? 'text-gray-400' : 'text-gray-700'
+                  }`}>Page Theme:</span>
                   <select 
                     value={bgColor} 
                     onChange={e => changeBgColor(e.target.value)}
-                    className="border border-gray-300 rounded px-1.5 py-0.5 text-xs bg-white font-medium focus:ring-1 focus:ring-blue-500 outline-none shadow-sm cursor-pointer min-w-[110px]"
+                    className={`border rounded px-1.5 py-0.5 text-xs font-medium focus:ring-1 focus:ring-blue-500 outline-none shadow-sm cursor-pointer min-w-[110px] ${
+                      isDarkMode ? 'bg-gray-900 border-gray-800 text-gray-100' : 'bg-white border-gray-300 text-gray-900'
+                    }`}
                   >
                     {BASIC_THEME_OPTIONS.map(c => (
                       <option key={c.name} value={c.bgValue}>{c.name}</option>
@@ -660,11 +698,15 @@
                 </div>
 
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[10px] font-bold text-gray-700 uppercase tracking-wider">Columns:</span>
+                  <span className={`text-[10px] font-bold uppercase tracking-wider ${
+                    isDarkMode ? 'text-gray-400' : 'text-gray-700'
+                  }`}>Columns:</span>
                   <select 
                     value={colColor} 
                     onChange={e => changeColColor(e.target.value)}
-                    className="border border-gray-300 rounded px-1.5 py-0.5 text-xs bg-white font-medium focus:ring-1 focus:ring-blue-500 outline-none shadow-sm cursor-pointer min-w-[110px]"
+                    className={`border rounded px-1.5 py-0.5 text-xs font-medium focus:ring-1 focus:ring-blue-500 outline-none shadow-sm cursor-pointer min-w-[110px] ${
+                      isDarkMode ? 'bg-gray-900 border-gray-800 text-gray-100' : 'bg-white border-gray-300 text-gray-900'
+                    }`}
                   >
                     {BASIC_THEME_OPTIONS.map(c => (
                       <option key={c.name} value={c.colValue}>{c.name}</option>
@@ -706,11 +748,11 @@
                       const remStatus = getReminderStatus(task.reminder_date);
                       const remType = task.reminder_type || 'Reminder';
 
-                      let cardBgStyle = "bg-white border-l-4 " + (COLUMN_BORDER_COLORS[column] || 'border-blue-600');
+                      let cardBgStyle = isDarkMode ? "bg-gray-950 border-l-4 " + (COLUMN_BORDER_COLORS[column] || 'border-blue-600') : "bg-white border-l-4 " + (COLUMN_BORDER_COLORS[column] || 'border-blue-600');
                       if (remStatus === 'OVERDUE') {
-                        cardBgStyle = "bg-red-50/90 border-l-4 border-red-600 ring-2 ring-red-500/40";
+                        cardBgStyle = isDarkMode ? "bg-red-950/80 border-l-4 border-red-500 ring-1 ring-red-500/50" : "bg-red-50/90 border-l-4 border-red-600 ring-2 ring-red-500/40";
                       } else if (remStatus === 'DUE_TODAY') {
-                        cardBgStyle = "bg-purple-50/90 border-l-4 border-purple-600 ring-2 ring-purple-500/40";
+                        cardBgStyle = isDarkMode ? "bg-purple-950/80 border-l-4 border-purple-500 ring-1 ring-purple-500/50" : "bg-purple-50/90 border-l-4 border-purple-600 ring-2 ring-purple-500/40";
                       }
 
                       return (
@@ -732,30 +774,34 @@
                                   target="_blank" 
                                   rel="noopener noreferrer" 
                                   onClick={e => e.stopPropagation()} 
-                                  className="text-xs font-bold text-blue-600 hover:text-blue-800 no-underline truncate"
+                                  className={`text-xs font-bold no-underline truncate ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-800'}`}
                                   title="Open Jira URL"
                                 >
                                   {extractJiraID(task.jira_id)}
                                 </a>
                               ) : (
-                                <span className="text-xs font-bold text-blue-600 truncate">{extractJiraID(task.jira_id)}</span>
+                                <span className={`text-xs font-bold truncate ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>{extractJiraID(task.jira_id)}</span>
                               )}
                             </div>
                             <span className="text-[10px] text-gray-400">{formatDate(task.created_at)}</span>
                           </div>
 
-                          <div className="font-semibold text-gray-900 line-clamp-2">{task.title || 'Untitled Task'}</div>
+                          <div className={`font-semibold line-clamp-2 ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>{task.title || 'Untitled Task'}</div>
 
                           {/* PIPELINE MONTH BADGE */}
                           {task.pipeline_month && (
-                            <div className="mt-2 text-[10px] font-bold text-blue-800 bg-blue-100 border border-blue-200 px-2 py-0.5 rounded flex items-center gap-1 w-fit">
+                            <div className={`mt-2 text-[10px] font-bold border px-2 py-0.5 rounded flex items-center gap-1 w-fit ${
+                              isDarkMode ? 'bg-blue-950 text-blue-300 border-blue-800' : 'bg-blue-100 text-blue-800 border-blue-200'
+                            }`}>
                               <span>🗓️ {task.pipeline_month.slice(0, 3)} Pipeline</span>
                             </div>
                           )}
 
                           {/* TARGET LIVE DATE BADGE */}
                           {task.live_date && (
-                            <div className="mt-1.5 text-[11px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded flex items-center gap-1 w-fit">
+                            <div className={`mt-1.5 text-[11px] font-bold border px-2 py-0.5 rounded flex items-center gap-1 w-fit ${
+                              isDarkMode ? 'bg-emerald-950 text-emerald-300 border-emerald-800' : 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                            }`}>
                               <span>🚀 Live:</span> {formatDateOnly(task.live_date)}
                             </div>
                           )}
@@ -775,9 +821,9 @@
 
                           {remStatus === 'UPCOMING' && (
                             <div className={`mt-2.5 text-[11px] font-bold px-2 py-0.5 rounded flex items-center gap-1 w-fit border ${
-                              remType === 'Due Date' ? 'bg-red-50 text-red-700 border-red-200' :
-                              remType === 'Follow-up' ? 'bg-teal-50 text-teal-800 border-teal-200' :
-                              'bg-slate-100 text-slate-700 border-slate-300'
+                              remType === 'Due Date' ? (isDarkMode ? 'bg-red-950 text-red-300 border-red-800' : 'bg-red-50 text-red-700 border-red-200') :
+                              remType === 'Follow-up' ? (isDarkMode ? 'bg-teal-950 text-teal-300 border-teal-800' : 'bg-teal-50 text-teal-800 border-teal-200') :
+                              (isDarkMode ? 'bg-gray-800 text-gray-300 border-gray-700' : 'bg-slate-100 text-slate-700 border-slate-300')
                             }`}>
                               <span>{remType === 'Due Date' ? '📅 Due Date:' : remType === 'Follow-up' ? '📌 Follow-up:' : '🕒 Reminder:'}</span> {formatDate(task.reminder_date)}
                             </div>
@@ -794,22 +840,28 @@
           {/* TEMPLATES MANAGER MODAL WINDOW */}
           {isTemplateModalOpen && (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-              <div ref={templateModalRef} className="bg-white rounded-xl w-full max-w-3xl max-h-[85vh] overflow-y-auto p-6 shadow-2xl space-y-6">
-                <div className="flex justify-between items-center border-b pb-3">
+              <div ref={templateModalRef} className={`rounded-xl w-full max-w-3xl max-h-[85vh] overflow-y-auto p-6 shadow-2xl space-y-6 border ${
+                isDarkMode ? 'bg-gray-900 border-gray-800 text-gray-100' : 'bg-white border-gray-200 text-gray-900'
+              }`}>
+                <div className="flex justify-between items-center border-b pb-3 border-current opacity-80">
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-900">Saved Template Spaces</h2>
-                    <p className="text-xs text-gray-500 mt-1">Saved directly in your Supabase database. Paste images (Ctrl+V) & copy content instantly.</p>
+                    <h2 className="text-2xl font-bold">Saved Template Spaces</h2>
+                    <p className={`text-xs mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Saved directly in your Supabase database. Paste images (Ctrl+V) & copy content instantly.</p>
                   </div>
-                  <button onClick={() => setIsTemplateModalOpen(false)} className="text-gray-500 hover:text-red-500 font-bold text-xl">✕</button>
+                  <button onClick={() => setIsTemplateModalOpen(false)} className="text-gray-400 hover:text-red-500 font-bold text-xl">✕</button>
                 </div>
 
                 <div ref={templateListRef} className="space-y-6 max-h-[55vh] overflow-y-auto pr-2">
                   {templateSpaces.map((space) => (
-                    <div key={space.id} className="bg-gray-50 p-4 border border-gray-200 rounded-lg space-y-3 relative shadow-sm">
+                    <div key={space.id} className={`p-4 border rounded-lg space-y-3 relative shadow-sm ${
+                      isDarkMode ? 'bg-gray-950 border-gray-800' : 'bg-gray-50 border-gray-200'
+                    }`}>
                       <div className="flex justify-between items-center gap-4">
                         <input 
                           type="text" 
-                          className="font-bold text-gray-800 bg-white border border-gray-300 rounded px-2.5 py-1 text-sm flex-1 focus:ring-2 focus:ring-blue-500 outline-none" 
+                          className={`font-bold border rounded px-2.5 py-1 text-sm flex-1 focus:ring-2 focus:ring-blue-500 outline-none ${
+                            isDarkMode ? 'bg-gray-900 border-gray-800 text-gray-100' : 'bg-white border-gray-300 text-gray-800'
+                          }`} 
                           value={space.title || ''} 
                           onChange={e => updateTemplateSpace(space.id, 'title', e.target.value)} 
                           placeholder="Template Title" 
@@ -848,7 +900,7 @@
                   ))}
                 </div>
 
-                <div className="flex justify-between items-center border-t pt-4">
+                <div className="flex justify-between items-center border-t pt-4 border-current opacity-80">
                   <button 
                     onClick={addTemplateSpace} 
                     className="bg-indigo-600 text-white text-xs font-bold px-4 py-2 rounded hover:bg-indigo-700 shadow-sm transition-all"
@@ -857,7 +909,9 @@
                   </button>
                   <button 
                     onClick={() => setIsTemplateModalOpen(false)} 
-                    className="bg-gray-200 text-gray-800 text-xs font-bold px-4 py-2 rounded hover:bg-gray-300 transition-all"
+                    className={`text-xs font-bold px-4 py-2 rounded transition-all ${
+                      isDarkMode ? 'bg-gray-800 text-gray-200 hover:bg-gray-700' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                    }`}
                   >
                     Close
                   </button>
@@ -869,24 +923,28 @@
           {/* TASK DOCUMENT MODAL WINDOW */}
           {isModalOpen && (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-              <div ref={modalRef} className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
-                <div className="flex justify-between items-center mb-6 border-b pb-4">
+              <div ref={modalRef} className={`rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl border ${
+                isDarkMode ? 'bg-gray-900 border-gray-800 text-gray-100' : 'bg-white border-gray-200 text-gray-900'
+              }`}>
+                <div className="flex justify-between items-center mb-6 border-b pb-4 border-current opacity-80">
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-900">Document Template</h2>
+                    <h2 className="text-2xl font-bold">Document Template</h2>
                     {currentTask.created_at && (
-                      <p className="text-xs text-gray-500 mt-1">Created: {formatDate(currentTask.created_at)}</p>
+                      <p className={`text-xs mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Created: {formatDate(currentTask.created_at)}</p>
                     )}
                   </div>
-                  <button onClick={() => setIsModalOpen(false)} className="text-gray-500 hover:text-red-500 font-bold text-xl">✕</button>
+                  <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-red-500 font-bold text-xl">✕</button>
                 </div>
                 <div className="space-y-6">
                   {/* MAIN FIELDS TOP ROW WITH PIPELINE MONTH & NATIVE DATE PICKER */}
                   <div className="grid grid-cols-12 gap-3 items-end">
                     <div className="col-span-3">
-                      <label className="block text-xs font-bold text-gray-700 mb-1">Title</label>
+                      <label className={`block text-xs font-bold mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Title</label>
                       <input 
                         type="text" 
-                        className="w-full border border-gray-300 p-2 rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none" 
+                        className={`w-full border p-2 rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none ${
+                          isDarkMode ? 'bg-gray-950 border-gray-800 text-gray-100' : 'bg-white border-gray-300 text-gray-900'
+                        }`} 
                         value={currentTask.title || ''} 
                         onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, title: val})); }} 
                         spellCheck="true"
@@ -895,34 +953,51 @@
                     
                     <div className="col-span-3">
                       <div className="flex justify-between items-center mb-1">
-                        <label className="block text-xs font-bold text-gray-700">Jira Link/ID</label>
+                        <label className={`block text-xs font-bold ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Jira Link/ID</label>
                         {getFormattedUrl(currentTask.jira_id) && (
                           <a 
                             href={getFormattedUrl(currentTask.jira_id)} 
                             target="_blank" 
                             rel="noopener noreferrer" 
-                            className="text-xs font-bold text-blue-600 hover:text-blue-800 no-underline"
+                            className="text-xs font-bold text-blue-500 hover:text-blue-400 no-underline"
                             title="Open Jira URL"
                           >
                             🔗
                           </a>
                         )}
                       </div>
-                      <input type="text" className="w-full border border-gray-300 p-2 rounded text-xs" value={currentTask.jira_id || ''} onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, jira_id: val})); }} placeholder="Paste Jira URL or ID" spellCheck="false" />
+                      <input 
+                        type="text" 
+                        className={`w-full border p-2 rounded text-xs ${
+                          isDarkMode ? 'bg-gray-950 border-gray-800 text-gray-100' : 'bg-white border-gray-300 text-gray-900'
+                        }`} 
+                        value={currentTask.jira_id || ''} 
+                        onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, jira_id: val})); }} 
+                        placeholder="Paste Jira URL or ID" 
+                        spellCheck="false" 
+                      />
                     </div>
 
                     <div className="col-span-2">
-                      <label className="block text-xs font-bold text-gray-700 mb-1">Status</label>
-                      <select className="w-full border border-gray-300 p-2 rounded text-xs" value={currentTask.status || 'To Do'} onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, status: val})); }}>
+                      <label className={`block text-xs font-bold mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Status</label>
+                      <select 
+                        className={`w-full border p-2 rounded text-xs ${
+                          isDarkMode ? 'bg-gray-950 border-gray-800 text-gray-100' : 'bg-white border-gray-300 text-gray-900'
+                        }`} 
+                        value={currentTask.status || 'To Do'} 
+                        onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, status: val})); }}
+                      >
                         {COLUMNS.map(col => <option key={col} value={col}>{col}</option>)}
                       </select>
                     </div>
 
                     {/* PIPELINE MONTH SELECTOR */}
                     <div className="col-span-2">
-                      <label className="block text-xs font-bold text-gray-700 mb-1">Pipeline Month</label>
+                      <label className={`block text-xs font-bold mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Pipeline Month</label>
                       <select 
-                        className="w-full border border-gray-300 p-1.5 rounded text-xs bg-white focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer" 
+                        className={`w-full border p-1.5 rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer ${
+                          isDarkMode ? 'bg-gray-950 border-gray-800 text-gray-100' : 'bg-white border-gray-300 text-gray-900'
+                        }`} 
                         value={currentTask.pipeline_month || ''} 
                         onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, pipeline_month: val})); }}
                       >
@@ -933,10 +1008,12 @@
 
                     {/* TARGET LIVE DATE */}
                     <div className="col-span-2">
-                      <label className="block text-xs font-bold text-gray-700 mb-1">Target Live Date</label>
+                      <label className={`block text-xs font-bold mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Target Live Date</label>
                       <input 
                         type="date" 
-                        className="w-full border border-gray-300 p-1.5 rounded text-xs bg-white focus:ring-2 focus:ring-blue-500 outline-none font-medium cursor-pointer" 
+                        className={`w-full border p-1.5 rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none font-medium cursor-pointer ${
+                          isDarkMode ? 'bg-gray-950 border-gray-800 text-gray-100' : 'bg-white border-gray-300 text-gray-900'
+                        }`} 
                         value={currentTask.live_date || ''} 
                         onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, live_date: val})); }} 
                       />
@@ -945,7 +1022,9 @@
 
                   {/* PROJECT CHECKBOX ROW */}
                   <div className="flex justify-end">
-                    <label className="flex items-center gap-1.5 cursor-pointer font-bold text-xs text-red-600 bg-red-50 border border-red-200 px-3 py-1.5 rounded hover:bg-red-100 transition-colors">
+                    <label className={`flex items-center gap-1.5 cursor-pointer font-bold text-xs text-red-500 border border-red-500/30 px-3 py-1.5 rounded hover:bg-red-500/10 transition-colors ${
+                      isDarkMode ? 'bg-red-950/40' : 'bg-red-50'
+                    }`}>
                       <input 
                         type="checkbox" 
                         className="w-3.5 h-3.5 text-red-600 rounded focus:ring-red-500 cursor-pointer" 
@@ -957,18 +1036,24 @@
                   </div>
 
                   {/* REMINDER CATEGORY & NATIVE DATETIME PICKER WITH CLOCK/CALENDAR */}
-                  <div className="bg-purple-50 p-4 border border-purple-200 rounded-lg space-y-3">
+                  <div className={`p-4 border rounded-lg space-y-3 ${
+                    isDarkMode ? 'bg-purple-950/40 border-purple-800' : 'bg-purple-50 border-purple-200'
+                  }`}>
                     <div className="flex justify-between items-center">
-                      <label className="block text-sm font-bold text-purple-900 flex items-center gap-1.5">
+                      <label className={`block text-sm font-bold flex items-center gap-1.5 ${
+                        isDarkMode ? 'text-purple-300' : 'text-purple-900'
+                      }`}>
                         <span>🔔</span> Set Scheduled Reminder / Due Date
                       </label>
                       <div className="flex items-center gap-3">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-purple-900">Type:</span>
+                          <span className={`text-xs font-bold ${isDarkMode ? 'text-purple-300' : 'text-purple-900'}`}>Type:</span>
                           <select 
                             value={currentTask.reminder_type || 'Reminder'} 
                             onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, reminder_type: val})); }}
-                            className="border border-purple-300 rounded px-2 py-1 text-xs bg-white font-bold text-purple-950 outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer"
+                            className={`border rounded px-2 py-1 text-xs font-bold outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer ${
+                              isDarkMode ? 'bg-gray-900 border-purple-800 text-purple-200' : 'bg-white border-purple-300 text-purple-950'
+                            }`}
                           >
                             <option value="Reminder">🕒 Reminder</option>
                             <option value="Due Date">📅 Due Date</option>
@@ -991,13 +1076,17 @@
                     <div className="flex gap-3">
                       <input 
                         type="datetime-local" 
-                        className="w-1/3 border border-purple-300 p-2 rounded text-xs bg-white focus:ring-2 focus:ring-purple-500 outline-none font-medium cursor-pointer" 
+                        className={`w-1/3 border p-2 rounded text-xs focus:ring-2 focus:ring-purple-500 outline-none font-medium cursor-pointer ${
+                          isDarkMode ? 'bg-gray-950 border-purple-800 text-gray-100' : 'bg-white border-purple-300 text-gray-900'
+                        }`} 
                         value={formatDatetimeLocal(currentTask.reminder_date)} 
                         onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, reminder_date: val})); }} 
                       />
                       <input 
                         type="text" 
-                        className="flex-1 border border-purple-300 p-2 rounded text-xs bg-white focus:ring-2 focus:ring-purple-500 outline-none" 
+                        className={`flex-1 border p-2 rounded text-xs focus:ring-2 focus:ring-purple-500 outline-none ${
+                          isDarkMode ? 'bg-gray-950 border-purple-800 text-gray-100' : 'bg-white border-purple-300 text-gray-900'
+                        }`} 
                         placeholder="Free-text note for desktop alert (e.g. Follow up on draft response)..." 
                         value={currentTask.reminder_note || ''} 
                         onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, reminder_note: val})); }} 
@@ -1007,45 +1096,47 @@
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">What's The Problem Or Task</label>
+                    <label className={`block text-sm font-bold mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>What's The Problem Or Task</label>
                     <RichEditor id="editor-problem" value={currentTask.problem || ''} onChange={val => setCurrentTask(prev => ({...prev, problem: val}))} />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Where I Searched</label>
+                    <label className={`block text-sm font-bold mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Where I Searched</label>
                     <RichEditor id="editor-searched" value={currentTask.searched || ''} onChange={val => setCurrentTask(prev => ({...prev, searched: val}))} />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Actions</label>
+                    <label className={`block text-sm font-bold mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Actions</label>
                     <RichEditor id="editor-actions" value={currentTask.actions || ''} onChange={val => setCurrentTask(prev => ({...prev, actions: val}))} />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-1">Notes</label>
+                      <label className={`block text-sm font-bold mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Notes</label>
                       <RichEditor id="editor-notes" value={currentTask.notes || ''} onChange={val => setCurrentTask(prev => ({...prev, notes: val}))} />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-1">Related Files</label>
+                      <label className={`block text-sm font-bold mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Related Files</label>
                       <RichEditor id="editor-related" value={currentTask.related_files || ''} onChange={val => setCurrentTask(prev => ({...prev, related_files: val}))} />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Shelf Pages That Need Content</label>
+                    <label className={`block text-sm font-bold mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Shelf Pages That Need Content</label>
                     <RichEditor id="editor-shelf" value={currentTask.shelf_pages || ''} onChange={val => setCurrentTask(prev => ({...prev, shelf_pages: val}))} />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Questions & Answers</label>
+                    <label className={`block text-sm font-bold mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Questions & Answers</label>
                     <RichEditor id="editor-qa" value={currentTask.qa || ''} onChange={val => setCurrentTask(prev => ({...prev, qa: val}))} />
                   </div>
 
-                  <div className="bg-blue-50 p-4 border border-blue-200 rounded">
+                  <div className={`p-4 border rounded ${
+                    isDarkMode ? 'bg-blue-950/40 border-blue-800' : 'bg-blue-50 border-blue-200'
+                  }`}>
                     <div className="flex justify-between items-center mb-2">
-                      <label className="block text-sm font-bold text-blue-800">Response To Reporter</label>
+                      <label className={`block text-sm font-bold ${isDarkMode ? 'text-blue-300' : 'text-blue-800'}`}>Response To Reporter</label>
                       <button 
                         type="button" 
                         onClick={appendNewResponse} 
@@ -1055,7 +1146,9 @@
                       </button>
                     </div>
                     <textarea 
-                      className="w-full border border-blue-200 p-2 rounded h-40 font-mono text-sm bg-white" 
+                      className={`w-full border p-2 rounded h-40 font-mono text-sm ${
+                        isDarkMode ? 'bg-gray-950 border-blue-800 text-gray-100' : 'bg-white border-blue-200 text-gray-900'
+                      }`} 
                       value={currentTask.reporter_response || ''} 
                       onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, reporter_response: val})); }}
                       spellCheck="true"
@@ -1063,13 +1156,15 @@
                   </div>
                 </div>
 
-                <div className="mt-6 flex gap-4 border-t pt-4">
+                <div className="mt-6 flex gap-4 border-t pt-4 border-current opacity-80">
                   {currentTask.id && (
                     <button onClick={deleteTask} className="px-4 py-2 bg-red-100 text-red-700 font-bold rounded hover:bg-red-200 mr-auto">
                       Delete Task
                     </button>
                   )}
-                  <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded font-bold ml-auto">Cancel</button>
+                  <button onClick={() => setIsModalOpen(false)} className={`px-4 py-2 rounded font-bold ml-auto ${
+                    isDarkMode ? 'text-gray-300 hover:bg-gray-800' : 'text-gray-600 hover:bg-gray-100'
+                  }`}>Cancel</button>
                   <button onClick={saveTask} className="px-6 py-2 bg-green-600 text-white font-bold rounded hover:bg-green-700">Save Task</button>
                 </div>
               </div>
