@@ -512,8 +512,9 @@
             <div className="flex items-center gap-4">
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">Jira Tracker</h1>
+                {/* UPDATED LOG OUT TEXT */}
                 <button onClick={() => supabase.auth.signOut()} className="text-sm font-bold text-red-600 hover:text-red-800 mt-1">
-                  Securely Log Out
+                  Log Out
                 </button>
               </div>
 
@@ -600,8 +601,9 @@
                 <span>📋</span> Templates
               </button>
 
+              {/* UPDATED NEW JIRA BUTTON */}
               <button onClick={() => { setCurrentTask({ ...emptyTask }); setIsModalOpen(true); }} className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 font-bold transition-all text-sm">
-                + New Jira Task
+                + New Jira
               </button>
             </div>
           </div>
