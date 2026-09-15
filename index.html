@@ -225,6 +225,7 @@
       const [quickNotes, setQuickNotes] = useState('');
       const [quickTodos, setQuickTodos] = useState([]);
       const [newTodoInput, setNewTodoInput] = useState('');
+      const [newTodoDueDate, setNewTodoInputDueDate] = useState('');
 
       const [searchQuery, setSearchQuery] = useState('');
       const [filterStatus, setFilterStatus] = useState('ALL'); 
@@ -313,6 +314,24 @@
         });
       };
 
+      // HELPER: CHECK IF A SCRATCHPAD TODO IS DUE WITHIN 7 DAYS OR OVERDUE
+      const isTodoWithinSevenDaysOrOverdue = (dueDateStr) => {
+        if (!dueDateStr) return false;
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        
+        const due = new Date(dueDateStr);
+        due.setHours(0, 0, 0, 0);
+
+        const diffTime = due.getTime() - now.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        return diffDays <= 7;
+      };
+
+      // CHECK IF ANY INCOMPLETE SCRATCHPAD TASK HAS AN URGENT DUE DATE (<= 7 DAYS)
+      const hasUrgentScratchpadTodo = quickTodos.some(t => !t.done && isTodoWithinSevenDaysOrOverdue(t.dueDate));
+
       // SCRATCHPAD ACTIONS
       const handleNotesChange = (e) => {
         const val = e.target.value;
@@ -323,9 +342,13 @@
       const addQuickTodo = (e) => {
         e.preventDefault();
         if (!newTodoInput.trim()) return;
-        const updated = [...quickTodos, { id: Date.now(), text: newTodoInput.trim(), done: false }];
+        const updated = [
+          ...quickTodos, 
+          { id: Date.now(), text: newTodoInput.trim(), dueDate: newTodoDueDate || null, done: false }
+        ];
         setQuickTodos(updated);
         setNewTodoInput('');
+        setNewTodoInputDueDate('');
         saveScratchpadToSupabase(quickNotes, updated);
       };
 
@@ -748,13 +771,17 @@
       return (
         <div className={`min-h-screen p-3 sm:p-8 font-sans transition-colors duration-300 ${bgColor} relative overflow-x-hidden`}>
           
-          {/* FLOATING SIDE SCRATCHPAD BUTTON */}
+          {/* FLOATING SIDE SCRATCHPAD BUTTON WITH ANIMATED RED PULSE ALERT */}
           <button 
             onClick={() => setIsNotesDrawerOpen(true)}
-            className="fixed right-0 top-1/3 z-40 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-3 px-2 rounded-l-lg shadow-xl flex flex-col items-center gap-1.5 transition-all"
-            title="Open Personal Scratchpad & Non-Jira Tasks"
+            className={`fixed right-0 top-1/3 z-40 text-white font-bold text-xs py-3 px-2 rounded-l-lg shadow-xl flex flex-col items-center gap-1.5 transition-all ${
+              hasUrgentScratchpadTodo 
+                ? 'bg-red-600 animate-pulse ring-2 ring-red-400' 
+                : 'bg-indigo-600 hover:bg-indigo-700'
+            }`}
+            title={hasUrgentScratchpadTodo ? "Warning: Non-Jira tasks due within 7 days or overdue!" : "Open Personal Scratchpad & Non-Jira Tasks"}
           >
-            <span className="text-base">📝</span>
+            <span className="text-base">{hasUrgentScratchpadTodo ? '⚠️' : '📝'}</span>
             <span className="[writing-mode:vertical-lr] rotate-180 tracking-wider uppercase font-semibold text-[10px]">Scratchpad</span>
           </button>
 
@@ -770,40 +797,67 @@
                   <button onClick={() => setIsNotesDrawerOpen(false)} className="text-gray-400 hover:text-red-500 font-bold text-xl">✕</button>
                 </div>
 
-                {/* QUICK NON-JIRA TO-DO LIST */}
+                {/* QUICK NON-JIRA TO-DO LIST WITH DUE DATES */}
                 <div className="space-y-3">
                   <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Quick Non-Jira Tasks</h3>
-                  <form onSubmit={addQuickTodo} className="flex gap-2">
+                  <form onSubmit={addQuickTodo} className="flex flex-col gap-2">
                     <input 
                       type="text" 
                       value={newTodoInput} 
                       onChange={e => setNewTodoInput(e.target.value)}
-                      placeholder="Add a task (e.g. Ping Slack)..." 
-                      className="flex-1 border border-gray-300 rounded px-2.5 py-1 text-xs focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 bg-white"
+                      placeholder="Add task (e.g. Ping Slack)..." 
+                      className="border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 bg-white"
                     />
-                    <button type="submit" className="bg-blue-600 text-white font-bold text-xs px-3 py-1 rounded hover:bg-blue-700">+</button>
+                    <div className="flex gap-2 items-center">
+                      <input 
+                        type="date" 
+                        value={newTodoDueDate} 
+                        onChange={e => setNewTodoInputDueDate(e.target.value)}
+                        className="flex-1 border border-gray-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 outline-none text-gray-800 bg-white font-medium"
+                      />
+                      <button type="submit" className="bg-blue-600 text-white font-bold text-xs px-3 py-1 rounded hover:bg-blue-700">+ Add Task</button>
+                    </div>
                   </form>
 
-                  <div className="max-h-44 overflow-y-auto space-y-1.5 pr-1">
+                  <div className="max-h-52 overflow-y-auto space-y-2 pr-1">
                     {quickTodos.length === 0 ? (
                       <p className="text-xs text-gray-400 italic">No non-Jira tasks added yet.</p>
                     ) : (
-                      quickTodos.map(todo => (
-                        <div key={todo.id} className="flex items-center justify-between bg-gray-50 p-2 rounded border border-gray-200 text-xs">
-                          <label className="flex items-center gap-2 flex-1 cursor-pointer truncate">
-                            <input 
-                              type="checkbox" 
-                              checked={todo.done} 
-                              onChange={() => toggleQuickTodo(todo.id)} 
-                              className="w-3.5 h-3.5 text-blue-600 rounded"
-                            />
-                            <span className={todo.done ? "line-through text-gray-400 truncate" : "text-gray-800 font-medium truncate"}>
-                              {todo.text}
-                            </span>
-                          </label>
-                          <button onClick={() => removeQuickTodo(todo.id)} className="text-gray-400 hover:text-red-500 font-bold pl-2">✕</button>
-                        </div>
-                      ))
+                      quickTodos.map(todo => {
+                        const isUrgent = !todo.done && isTodoWithinSevenDaysOrOverdue(todo.dueDate);
+                        return (
+                          <div 
+                            key={todo.id} 
+                            className={`flex items-center justify-between p-2 rounded border text-xs transition-all ${
+                              isUrgent 
+                                ? 'bg-red-50 border-red-300 text-red-950 font-semibold' 
+                                : 'bg-gray-50 border-gray-200 text-gray-800'
+                            }`}
+                          >
+                            <label className="flex items-center gap-2 flex-1 cursor-pointer truncate">
+                              <input 
+                                type="checkbox" 
+                                checked={todo.done} 
+                                onChange={() => toggleQuickTodo(todo.id)} 
+                                className="w-3.5 h-3.5 text-blue-600 rounded"
+                              />
+                              <div className="flex flex-col truncate">
+                                <span className={todo.done ? "line-through text-gray-400 truncate" : "truncate"}>
+                                  {todo.text}
+                                </span>
+                                {todo.dueDate && (
+                                  <span className={`text-[10px] font-bold ${
+                                    todo.done ? 'text-gray-400 line-through' : isUrgent ? 'text-red-700 animate-pulse' : 'text-gray-500'
+                                  }`}>
+                                    📅 Due: {formatDateOnly(todo.dueDate)} {isUrgent && !todo.done ? '(Urgent)' : ''}
+                                  </span>
+                                )}
+                              </div>
+                            </label>
+                            <button onClick={() => removeQuickTodo(todo.id)} className="text-gray-400 hover:text-red-500 font-bold pl-2">✕</button>
+                          </div>
+                        );
+                      })
                     )}
                   </div>
                 </div>
