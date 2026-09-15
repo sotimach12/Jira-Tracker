@@ -328,15 +328,51 @@
         }));
       };
 
-      // EXPORT/BACKUP TO JSON FILE
-      const exportTasksJSON = () => {
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(tasks, null, 2));
-        const downloadAnchor = document.createElement('a');
-        downloadAnchor.setAttribute("href", dataStr);
-        downloadAnchor.setAttribute("download", `jira_tracker_backup_${new Date().toISOString().slice(0,10)}.json`);
-        document.body.appendChild(downloadAnchor);
-        downloadAnchor.click();
-        downloadAnchor.remove();
+      // EXPORT TO EXCEL (CSV) FORMAT
+      const exportTasksCSV = () => {
+        if (!tasks || tasks.length === 0) {
+          alert("No tasks available to export.");
+          return;
+        }
+
+        const stripHTML = (html) => {
+          if (!html) return '';
+          const tmp = document.createElement('DIV');
+          tmp.innerHTML = html;
+          return (tmp.textContent || tmp.innerText || '').replace(/"/g, '""').trim();
+        };
+
+        const headers = ["ID", "Title", "Jira Link/ID", "Status", "Is Project", "Target Live Date", "Reminder Date", "Reminder Type", "Reminder Note", "Problem", "Searched", "Actions", "Notes", "Created At"];
+        
+        const csvRows = [
+          headers.join(','),
+          ...tasks.map(t => [
+            `"${t.id || ''}"`,
+            `"${(t.title || '').replace(/"/g, '""')}"`,
+            `"${(t.jira_id || '').replace(/"/g, '""')}"`,
+            `"${t.status || ''}"`,
+            `"${t.is_project ? 'Yes' : 'No'}"`,
+            `"${formatDateOnly(t.live_date)}"`,
+            `"${formatDate(t.reminder_date)}"`,
+            `"${t.reminder_type || ''}"`,
+            `"${(t.reminder_note || '').replace(/"/g, '""')}"`,
+            `"${stripHTML(t.problem)}"`,
+            `"${stripHTML(t.searched)}"`,
+            `"${stripHTML(t.actions)}"`,
+            `"${stripHTML(t.notes)}"`,
+            `"${formatDate(t.created_at)}"`
+          ].join(','))
+        ];
+
+        const csvContent = "\uFEFF" + csvRows.join('\n'); // Add UTF-8 BOM for Excel
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `jira_tracker_export_${new Date().toISOString().slice(0, 10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
       };
 
       // DRAG AND DROP HANDLERS
@@ -592,12 +628,13 @@
                 🔔
               </button>
 
+              {/* EXCEL EXPORT BUTTON */}
               <button 
-                onClick={exportTasksJSON}
-                className="bg-slate-700 hover:bg-slate-800 text-white px-2.5 py-1.5 rounded-lg shadow font-bold text-xs flex items-center gap-1 transition-all"
-                title="Export all tasks to a local backup file"
+                onClick={exportTasksCSV}
+                className="bg-emerald-700 hover:bg-emerald-800 text-white px-2.5 py-1.5 rounded-lg shadow font-bold text-xs flex items-center gap-1 transition-all"
+                title="Export all tasks directly into an Excel spreadsheet"
               >
-                💾 Export
+                📊 Excel Export
               </button>
 
               <div className="flex items-center gap-1 bg-gray-50 border border-gray-300 rounded-lg p-1 shadow-sm">
