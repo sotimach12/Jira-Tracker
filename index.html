@@ -54,11 +54,11 @@
     
     // Column Border Colors
     const COLUMN_BORDER_COLORS = {
-      'To Do': 'border-black',
-      'Active Jiras': 'border-amber-400',
-      'Waiting Jiras': 'border-slate-300',
-      'Parked/Paused Jiras': 'border-purple-600',
-      'Done/Closed': 'border-lime-400'
+      'To Do': 'border-l-black',
+      'Active Jiras': 'border-l-amber-400',
+      'Waiting Jiras': 'border-l-slate-300',
+      'Parked/Paused Jiras': 'border-l-purple-600',
+      'Done/Closed': 'border-l-lime-400'
     };
 
     // BASIC THEME OPTIONS
@@ -722,12 +722,12 @@
                       const remStatus = getReminderStatus(task.reminder_date);
                       const remType = task.reminder_type || 'Reminder';
 
-                      // JIRAS ALWAYS REMAIN CLASSIC SLATE REGARDLESS OF THEMES
-                      let cardBgStyle = "bg-slate-100 border border-slate-300 text-slate-900 border-l-4 " + (COLUMN_BORDER_COLORS[column] || 'border-blue-600');
+                      // RESTORED CUSTOM LEFT BORDER + CLASSIC SLATE BACKGROUND
+                      let cardBgStyle = `bg-slate-100 border border-slate-300 text-slate-900 border-l-4 ${COLUMN_BORDER_COLORS[column] || 'border-l-blue-600'}`;
                       if (remStatus === 'OVERDUE') {
-                        cardBgStyle = "bg-red-50 border-l-4 border-red-600 text-red-950 ring-2 ring-red-500/40";
+                        cardBgStyle = "bg-red-50 border border-slate-300 text-red-950 border-l-4 border-l-red-600 ring-2 ring-red-500/40";
                       } else if (remStatus === 'DUE_TODAY') {
-                        cardBgStyle = "bg-purple-50 border-l-4 border-purple-600 text-purple-950 ring-2 ring-purple-500/40";
+                        cardBgStyle = "bg-purple-50 border border-slate-300 text-purple-950 border-l-4 border-l-purple-600 ring-2 ring-purple-500/40";
                       }
 
                       return (
