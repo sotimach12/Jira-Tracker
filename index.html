@@ -77,9 +77,7 @@
       is_project: false,
       pipeline_month: '',
       live_date: '',
-      reminder_date: '',
-      reminder_note: '',
-      reminder_type: 'Reminder',
+      reminders: [],
       reporter_response: ''
     };
 
@@ -278,22 +276,33 @@
 
         const now = new Date();
         for (const task of tasks) {
-          if (task.reminder_date && !task.reminder_notified) {
-            const remTime = new Date(task.reminder_date);
-            if (remTime <= now) {
-              const jiraId = extractJiraID(task.jira_id) || 'JIRA Task';
-              const title = task.title || 'Task Reminder';
-              const rType = task.reminder_type || 'Reminder';
-              const note = task.reminder_note ? `\nNote: ${task.reminder_note}` : '';
+          const list = task.reminders || [];
+          let updated = false;
 
-              new Notification(`[${rType}] ${jiraId}`, {
-                body: `${title}${note}`,
-                icon: "📌"
-              });
+          const newReminders = list.map(rem => {
+            if (rem.date && !rem.notified) {
+              const remTime = new Date(rem.date);
+              if (remTime <= now) {
+                const jiraId = extractJiraID(task.jira_id) || 'JIRA Task';
+                const title = task.title || 'Task Reminder';
+                const rType = rem.type || 'Reminder';
+                const note = rem.note ? `\nNote: ${rem.note}` : '';
 
-              await supabase.from('tasks').update({ reminder_notified: true }).eq('id', task.id);
-              setTasks(prev => prev.map(t => t.id === task.id ? { ...t, reminder_notified: true } : t));
+                new Notification(`[${rType}] ${jiraId}`, {
+                  body: `${title}${note}`,
+                  icon: "📌"
+                });
+
+                updated = true;
+                return { ...rem, notified: true };
+              }
             }
+            return rem;
+          });
+
+          if (updated) {
+            await supabase.from('tasks').update({ reminders: newReminders }).eq('id', task.id);
+            setTasks(prev => prev.map(t => t.id === task.id ? { ...t, reminders: newReminders } : t));
           }
         }
       };
@@ -308,12 +317,28 @@
         localStorage.setItem('tracker_col', colorClass);
       };
 
-      const clearReminder = () => {
+      // MULTI-REMINDER MANAGEMENT
+      const addReminder = () => {
         setCurrentTask(prev => ({
           ...prev,
-          reminder_date: null,
-          reminder_note: '',
-          reminder_type: 'Reminder'
+          reminders: [
+            ...(prev.reminders || []),
+            { id: Date.now(), date: '', type: 'Reminder', note: '', notified: false }
+          ]
+        }));
+      };
+
+      const updateReminder = (id, field, value) => {
+        setCurrentTask(prev => ({
+          ...prev,
+          reminders: (prev.reminders || []).map(r => r.id === id ? { ...r, [field]: value } : r)
+        }));
+      };
+
+      const removeReminder = (id) => {
+        setCurrentTask(prev => ({
+          ...prev,
+          reminders: (prev.reminders || []).filter(r => r.id !== id)
         }));
       };
 
@@ -331,7 +356,7 @@
           return (tmp.textContent || tmp.innerText || '').replace(/"/g, '""').trim();
         };
 
-        const headers = ["ID", "Title", "Jira Link/ID", "Status", "Pipeline Month", "Is Project", "Target Live Date", "Reminder Date", "Reminder Type", "Reminder Note", "Problem", "Searched", "Actions", "Notes", "Created At"];
+        const headers = ["ID", "Title", "Jira Link/ID", "Status", "Pipeline Month", "Is Project", "Target Live Date", "Reminders Count", "Problem", "Searched", "Actions", "Notes", "Created At"];
         
         const csvRows = [
           headers.join(','),
@@ -343,9 +368,7 @@
             `"${t.pipeline_month || ''}"`,
             `"${t.is_project ? 'Yes' : 'No'}"`,
             `"${formatDateOnly(t.live_date)}"`,
-            `"${formatDate(t.reminder_date)}"`,
-            `"${t.reminder_type || ''}"`,
-            `"${(t.reminder_note || '').replace(/"/g, '""')}"`,
+            `"${(t.reminders || []).length}"`,
             `"${stripHTML(t.problem)}"`,
             `"${stripHTML(t.searched)}"`,
             `"${stripHTML(t.actions)}"`,
@@ -445,7 +468,26 @@
       const fetchTasks = async () => {
         setIsLoading(true);
         const { data, error } = await supabase.from('tasks').select('*').order('created_at', { ascending: false });
-        if (!error) setTasks(data || []);
+        if (!error && data) {
+          // Normalize legacy single-reminder tasks to multi-reminder array
+          const normalized = data.map(t => {
+            let list = t.reminders;
+            if (!Array.isArray(list)) {
+              list = [];
+              if (t.reminder_date) {
+                list.push({
+                  id: Date.now(),
+                  date: t.reminder_date,
+                  type: t.reminder_type || 'Reminder',
+                  note: t.reminder_note || '',
+                  notified: !!t.reminder_notified
+                });
+              }
+            }
+            return { ...t, reminders: list };
+          });
+          setTasks(normalized);
+        }
         setIsLoading(false);
       };
 
@@ -464,10 +506,10 @@
           is_project: !!currentTask.is_project,
           pipeline_month: currentTask.pipeline_month || '',
           live_date: currentTask.live_date || null,
-          reminder_date: currentTask.reminder_date ? new Date(currentTask.reminder_date).toISOString() : null,
-          reminder_note: currentTask.reminder_note || '',
-          reminder_type: currentTask.reminder_type || 'Reminder',
-          reminder_notified: false,
+          reminders: (currentTask.reminders || []).map(r => ({
+            ...r,
+            date: r.date ? new Date(r.date).toISOString() : ''
+          })),
           reporter_response: currentTask.reporter_response || ''
         };
 
@@ -550,6 +592,22 @@
         return 'UPCOMING';
       };
 
+      const getTaskHighestReminderStatus = (reminders) => {
+        const list = reminders || [];
+        let hasOverdue = false;
+        let hasToday = false;
+
+        for (const r of list) {
+          const st = getReminderStatus(r.date);
+          if (st === 'OVERDUE') hasOverdue = true;
+          if (st === 'DUE_TODAY') hasToday = true;
+        }
+
+        if (hasOverdue) return 'OVERDUE';
+        if (hasToday) return 'DUE_TODAY';
+        return list.length > 0 ? 'UPCOMING' : null;
+      };
+
       const filteredTasks = tasks.filter(task => {
         if (searchQuery.trim()) {
           const q = searchQuery.toLowerCase();
@@ -565,11 +623,12 @@
           }
         }
 
+        const taskReminders = task.reminders || [];
         if (filterStatus === 'PROJECTS_ONLY') return task.is_project;
-        if (filterStatus === 'DUE_TODAY') return getReminderStatus(task.reminder_date) === 'DUE_TODAY';
-        if (filterStatus === 'OVERDUE') return getReminderStatus(task.reminder_date) === 'OVERDUE';
-        if (filterStatus === 'TYPE_DUE_DATE') return task.reminder_type === 'Due Date';
-        if (filterStatus === 'TYPE_FOLLOWUP') return task.reminder_type === 'Follow-up';
+        if (filterStatus === 'DUE_TODAY') return taskReminders.some(r => getReminderStatus(r.date) === 'DUE_TODAY');
+        if (filterStatus === 'OVERDUE') return taskReminders.some(r => getReminderStatus(r.date) === 'OVERDUE');
+        if (filterStatus === 'TYPE_DUE_DATE') return taskReminders.some(r => r.type === 'Due Date');
+        if (filterStatus === 'TYPE_FOLLOWUP') return taskReminders.some(r => r.type === 'Follow-up');
         return true;
       });
 
@@ -648,10 +707,10 @@
                   }`}
                 >
                   <option value="ALL">All ({tasks.length})</option>
-                  <option value="DUE_TODAY">📅 Today ({tasks.filter(t => getReminderStatus(t.reminder_date) === 'DUE_TODAY').length})</option>
-                  <option value="OVERDUE">⚠️ Overdue ({tasks.filter(t => getReminderStatus(t.reminder_date) === 'OVERDUE').length})</option>
-                  <option value="TYPE_DUE_DATE">📅 Due Dates ({tasks.filter(t => t.reminder_type === 'Due Date').length})</option>
-                  <option value="TYPE_FOLLOWUP">📌 Follow-ups ({tasks.filter(t => t.reminder_type === 'Follow-up').length})</option>
+                  <option value="DUE_TODAY">📅 Today ({tasks.filter(t => (t.reminders || []).some(r => getReminderStatus(r.date) === 'DUE_TODAY')).length})</option>
+                  <option value="OVERDUE">⚠️ Overdue ({tasks.filter(t => (t.reminders || []).some(r => getReminderStatus(r.date) === 'OVERDUE')).length})</option>
+                  <option value="TYPE_DUE_DATE">📅 Due Dates ({tasks.filter(t => (t.reminders || []).some(r => r.type === 'Due Date')).length})</option>
+                  <option value="TYPE_FOLLOWUP">📌 Follow-ups ({tasks.filter(t => (t.reminders || []).some(r => r.type === 'Follow-up')).length})</option>
                   <option value="PROJECTS_ONLY">📌 Projects ({tasks.filter(t => t.is_project).length})</option>
                 </select>
               </div>
@@ -719,14 +778,13 @@
                   <div className="space-y-4 overflow-y-auto pr-1.5 flex-1 min-h-[100px]">
                     {columnTasks.map(task => {
                       const cardUrl = getFormattedUrl(task.jira_id);
-                      const remStatus = getReminderStatus(task.reminder_date);
-                      const remType = task.reminder_type || 'Reminder';
+                      const remindersList = task.reminders || [];
+                      const highestStatus = getTaskHighestReminderStatus(remindersList);
 
-                      // RESTORED CUSTOM LEFT BORDER + CLASSIC SLATE BACKGROUND
-                      let cardBgStyle = `bg-slate-100 border border-slate-300 text-slate-900 border-l-4 ${COLUMN_BORDER_COLORS[column] || 'border-l-blue-600'}`;
-                      if (remStatus === 'OVERDUE') {
+                      let cardBgStyle = "bg-slate-100 border border-slate-300 text-slate-900 border-l-4 " + (COLUMN_BORDER_COLORS[column] || 'border-l-blue-600');
+                      if (highestStatus === 'OVERDUE') {
                         cardBgStyle = "bg-red-50 border border-slate-300 text-red-950 border-l-4 border-l-red-600 ring-2 ring-red-500/40";
-                      } else if (remStatus === 'DUE_TODAY') {
+                      } else if (highestStatus === 'DUE_TODAY') {
                         cardBgStyle = "bg-purple-50 border border-slate-300 text-purple-950 border-l-4 border-l-purple-600 ring-2 ring-purple-500/40";
                       }
 
@@ -777,28 +835,36 @@
                             </div>
                           )}
 
-                          {/* IN-APP DYNAMIC BADGES */}
-                          {remStatus === 'OVERDUE' && (
-                            <div className="mt-2.5 text-[11px] font-bold text-red-800 bg-red-100 border border-red-300 px-2 py-1 rounded flex items-center gap-1 w-fit animate-pulse">
-                              <span>⚠️ Overdue ({remType}):</span> {formatDate(task.reminder_date)}
-                            </div>
-                          )}
+                          {/* MULTIPLE REMINDERS BADGES */}
+                          {remindersList.map((rem, idx) => {
+                            const remStatus = getReminderStatus(rem.date);
+                            const remType = rem.type || 'Reminder';
 
-                          {remStatus === 'DUE_TODAY' && (
-                            <div className="mt-2.5 text-[11px] font-bold text-purple-900 bg-purple-100 border border-purple-300 px-2 py-1 rounded flex items-center gap-1 w-fit">
-                              <span>📅 Due Today ({remType}):</span> {formatDate(task.reminder_date)}
-                            </div>
-                          )}
-
-                          {remStatus === 'UPCOMING' && (
-                            <div className={`mt-2.5 text-[11px] font-bold px-2 py-0.5 rounded flex items-center gap-1 w-fit border ${
-                              remType === 'Due Date' ? 'bg-red-50 text-red-700 border-red-200' :
-                              remType === 'Follow-up' ? 'bg-teal-50 text-teal-800 border-teal-200' :
-                              'bg-slate-200 text-slate-700 border-slate-300'
-                            }`}>
-                              <span>{remType === 'Due Date' ? '📅 Due Date:' : remType === 'Follow-up' ? '📌 Follow-up:' : '🕒 Reminder:'}</span> {formatDate(task.reminder_date)}
-                            </div>
-                          )}
+                            if (remStatus === 'OVERDUE') {
+                              return (
+                                <div key={rem.id || idx} className="mt-2 text-[10px] font-bold text-red-800 bg-red-100 border border-red-300 px-2 py-0.5 rounded flex items-center gap-1 w-fit animate-pulse">
+                                  <span>⚠️ Overdue ({remType}):</span> {formatDate(rem.date)}
+                                </div>
+                              );
+                            } else if (remStatus === 'DUE_TODAY') {
+                              return (
+                                <div key={rem.id || idx} className="mt-2 text-[10px] font-bold text-purple-900 bg-purple-100 border border-purple-300 px-2 py-0.5 rounded flex items-center gap-1 w-fit">
+                                  <span>📅 Due Today ({remType}):</span> {formatDate(rem.date)}
+                                </div>
+                              );
+                            } else if (remStatus === 'UPCOMING') {
+                              return (
+                                <div key={rem.id || idx} className={`mt-1.5 text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 w-fit border ${
+                                  remType === 'Due Date' ? 'bg-red-50 text-red-700 border-red-200' :
+                                  remType === 'Follow-up' ? 'bg-teal-50 text-teal-800 border-teal-200' :
+                                  'bg-slate-200 text-slate-700 border-slate-300'
+                                }`}>
+                                  <span>{remType === 'Due Date' ? '📅 Due Date:' : remType === 'Follow-up' ? '📌 Follow-up:' : '🕒 Reminder:'}</span> {formatDate(rem.date)}
+                                </div>
+                              );
+                            }
+                            return null;
+                          })}
                         </div>
                       );
                     })}
@@ -984,54 +1050,66 @@
                     </label>
                   </div>
 
-                  {/* REMINDER CATEGORY & NATIVE DATETIME PICKER WITH CLOCK/CALENDAR */}
+                  {/* MULTI-REMINDER SECTION */}
                   <div className="p-4 border rounded-lg space-y-3 bg-purple-50 border-purple-200">
                     <div className="flex justify-between items-center">
                       <label className="block text-sm font-bold flex items-center gap-1.5 text-purple-900">
-                        <span>🔔</span> Set Scheduled Reminder / Due Date
+                        <span>🔔</span> Scheduled Reminders & Deadlines ({(currentTask.reminders || []).length})
                       </label>
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-purple-900">Type:</span>
-                          <select 
-                            value={currentTask.reminder_type || 'Reminder'} 
-                            onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, reminder_type: val})); }}
-                            className="border rounded px-2 py-1 text-xs font-bold outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer bg-white border-purple-300 text-purple-950"
-                          >
-                            <option value="Reminder">🕒 Reminder</option>
-                            <option value="Due Date">📅 Due Date</option>
-                            <option value="Follow-up">📌 Follow-up</option>
-                            <option value="Other">📝 Other</option>
-                          </select>
-                        </div>
-                        {currentTask.reminder_date && (
-                          <button 
-                            type="button" 
-                            onClick={clearReminder} 
-                            className="text-xs font-bold text-red-600 bg-red-100 hover:bg-red-200 border border-red-200 px-2.5 py-1 rounded transition-all shadow-sm flex items-center gap-1"
-                            title="Remove date & reminder"
-                          >
-                            <span>🗑️</span> Remove Reminder
-                          </button>
-                        )}
+                      <button 
+                        type="button" 
+                        onClick={addReminder} 
+                        className="text-xs bg-purple-700 text-white font-bold px-3 py-1.5 rounded hover:bg-purple-800 transition-all shadow-sm"
+                      >
+                        + Add Reminder
+                      </button>
+                    </div>
+
+                    {(currentTask.reminders || []).length === 0 ? (
+                      <p className="text-xs text-purple-700 italic">No reminders set for this Jira yet.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {(currentTask.reminders || []).map((rem, idx) => (
+                          <div key={rem.id || idx} className="flex gap-2 items-center bg-white p-2 border border-purple-200 rounded">
+                            <select 
+                              value={rem.type || 'Reminder'} 
+                              onChange={e => updateReminder(rem.id, 'type', e.target.value)}
+                              className="border rounded px-2 py-1 text-xs font-bold bg-white border-purple-300 text-purple-950 outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer"
+                            >
+                              <option value="Reminder">🕒 Reminder</option>
+                              <option value="Due Date">📅 Due Date</option>
+                              <option value="Follow-up">📌 Follow-up</option>
+                              <option value="Other">📝 Other</option>
+                            </select>
+
+                            <input 
+                              type="datetime-local" 
+                              className="w-2/5 border p-1.5 rounded text-xs focus:ring-2 focus:ring-purple-500 outline-none font-medium cursor-pointer bg-white border-purple-300 text-gray-900" 
+                              value={formatDatetimeLocal(rem.date)} 
+                              onChange={e => updateReminder(rem.id, 'date', e.target.value)} 
+                            />
+
+                            <input 
+                              type="text" 
+                              className="flex-1 border p-1.5 rounded text-xs focus:ring-2 focus:ring-purple-500 outline-none bg-white border-purple-300 text-gray-900" 
+                              placeholder="Free-text note for alert..." 
+                              value={rem.note || ''} 
+                              onChange={e => updateReminder(rem.id, 'note', e.target.value)} 
+                              spellCheck="true"
+                            />
+
+                            <button 
+                              type="button" 
+                              onClick={() => removeReminder(rem.id)} 
+                              className="text-xs text-red-600 hover:text-red-800 font-bold px-1.5"
+                              title="Delete this reminder"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
                       </div>
-                    </div>
-                    <div className="flex gap-3">
-                      <input 
-                        type="datetime-local" 
-                        className="w-1/3 border p-2 rounded text-xs focus:ring-2 focus:ring-purple-500 outline-none font-medium cursor-pointer bg-white border-purple-300 text-gray-900" 
-                        value={formatDatetimeLocal(currentTask.reminder_date)} 
-                        onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, reminder_date: val})); }} 
-                      />
-                      <input 
-                        type="text" 
-                        className="flex-1 border p-2 rounded text-xs focus:ring-2 focus:ring-purple-500 outline-none bg-white border-purple-300 text-gray-900" 
-                        placeholder="Free-text note for desktop alert (e.g. Follow up on draft response)..." 
-                        value={currentTask.reminder_note || ''} 
-                        onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, reminder_note: val})); }} 
-                        spellCheck="true"
-                      />
-                    </div>
+                    )}
                   </div>
 
                   <div>
