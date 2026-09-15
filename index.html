@@ -82,7 +82,7 @@
       'Done/Closed': 'border-lime-400'
     };
 
-    // BASIC THEME OPTIONS INCLUDING OLED DARK
+    // BASIC THEME OPTIONS
     const BASIC_THEME_OPTIONS = [
       { name: 'Classic Slate', bgValue: 'bg-slate-200', colValue: 'bg-slate-100 border-slate-300 text-slate-900' },
       { name: 'Pure Light', bgValue: 'bg-gray-100', colValue: 'bg-white border-gray-300 text-gray-900 shadow-md' },
@@ -241,7 +241,7 @@
       });
 
       const [colColor, setColColor] = useState(() => {
-        return localStorage.getItem('tracker_col') || BASIC_THEME_OPTIONS[1].colValue;
+        return localStorage.getItem('tracker_col') || BASIC_THEME_OPTIONS[0].colValue;
       });
 
       useEffect(() => { 
@@ -594,15 +594,14 @@
         return true;
       });
 
-      const isDarkMode = bgColor.includes('theme-dark');
+      const isDarkMode = colColor.includes('bg-gray-900') || bgColor.includes('theme-dark');
 
       if (isLoading) return <div className="p-8 text-xl font-bold text-gray-700">Loading Your Secure Jira Tracker...</div>;
 
       return (
         <div className={`min-h-screen p-8 font-sans transition-colors duration-300 ${bgColor}`}>
-          <div className={`flex justify-between items-center mb-8 backdrop-blur-md p-4 rounded-xl shadow-lg border gap-4 ${
-            isDarkMode ? 'bg-gray-900/90 border-gray-800 text-white' : 'bg-white/90 border-white/20 text-gray-900'
-          }`}>
+          {/* HEADER BAR SHARES THE COLUMN THEME */}
+          <div className={`flex justify-between items-center mb-8 p-4 rounded-xl shadow-lg border gap-4 transition-all ${colColor}`}>
             <div className="flex items-center gap-4">
               <div>
                 <h1 className="text-3xl font-bold">Jira Tracker</h1>
@@ -678,12 +677,10 @@
                 </select>
               </div>
 
-              {/* SIMPLIFIED 6 THEME CONTROLS */}
+              {/* PAGE THEME & COLUMN THEME CONTROLS */}
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between gap-2">
-                  <span className={`text-[10px] font-bold uppercase tracking-wider ${
-                    isDarkMode ? 'text-gray-400' : 'text-gray-700'
-                  }`}>Page Theme:</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider opacity-90">Page Theme:</span>
                   <select 
                     value={bgColor} 
                     onChange={e => changeBgColor(e.target.value)}
@@ -698,9 +695,7 @@
                 </div>
 
                 <div className="flex items-center justify-between gap-2">
-                  <span className={`text-[10px] font-bold uppercase tracking-wider ${
-                    isDarkMode ? 'text-gray-400' : 'text-gray-700'
-                  }`}>Columns:</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider opacity-90">Columns:</span>
                   <select 
                     value={colColor} 
                     onChange={e => changeColColor(e.target.value)}
@@ -748,11 +743,12 @@
                       const remStatus = getReminderStatus(task.reminder_date);
                       const remType = task.reminder_type || 'Reminder';
 
-                      let cardBgStyle = isDarkMode ? "bg-gray-950 border-l-4 " + (COLUMN_BORDER_COLORS[column] || 'border-blue-600') : "bg-white border-l-4 " + (COLUMN_BORDER_COLORS[column] || 'border-blue-600');
+                      // JIRAS ALWAYS REMAIN CLASSIC SLATE REGARDLESS OF THEMES
+                      let cardBgStyle = "bg-slate-100 border border-slate-300 text-slate-900 border-l-4 " + (COLUMN_BORDER_COLORS[column] || 'border-blue-600');
                       if (remStatus === 'OVERDUE') {
-                        cardBgStyle = isDarkMode ? "bg-red-950/80 border-l-4 border-red-500 ring-1 ring-red-500/50" : "bg-red-50/90 border-l-4 border-red-600 ring-2 ring-red-500/40";
+                        cardBgStyle = "bg-red-50 border-l-4 border-red-600 text-red-950 ring-2 ring-red-500/40";
                       } else if (remStatus === 'DUE_TODAY') {
-                        cardBgStyle = isDarkMode ? "bg-purple-950/80 border-l-4 border-purple-500 ring-1 ring-purple-500/50" : "bg-purple-50/90 border-l-4 border-purple-600 ring-2 ring-purple-500/40";
+                        cardBgStyle = "bg-purple-50 border-l-4 border-purple-600 text-purple-950 ring-2 ring-purple-500/40";
                       }
 
                       return (
@@ -774,34 +770,30 @@
                                   target="_blank" 
                                   rel="noopener noreferrer" 
                                   onClick={e => e.stopPropagation()} 
-                                  className={`text-xs font-bold no-underline truncate ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-800'}`}
+                                  className="text-xs font-bold text-blue-600 hover:text-blue-800 no-underline truncate"
                                   title="Open Jira URL"
                                 >
                                   {extractJiraID(task.jira_id)}
                                 </a>
                               ) : (
-                                <span className={`text-xs font-bold truncate ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>{extractJiraID(task.jira_id)}</span>
+                                <span className="text-xs font-bold text-blue-600 truncate">{extractJiraID(task.jira_id)}</span>
                               )}
                             </div>
-                            <span className="text-[10px] text-gray-400">{formatDate(task.created_at)}</span>
+                            <span className="text-[10px] text-gray-500 font-medium">{formatDate(task.created_at)}</span>
                           </div>
 
-                          <div className={`font-semibold line-clamp-2 ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>{task.title || 'Untitled Task'}</div>
+                          <div className="font-semibold text-gray-900 line-clamp-2">{task.title || 'Untitled Task'}</div>
 
                           {/* PIPELINE MONTH BADGE */}
                           {task.pipeline_month && (
-                            <div className={`mt-2 text-[10px] font-bold border px-2 py-0.5 rounded flex items-center gap-1 w-fit ${
-                              isDarkMode ? 'bg-blue-950 text-blue-300 border-blue-800' : 'bg-blue-100 text-blue-800 border-blue-200'
-                            }`}>
+                            <div className="mt-2 text-[10px] font-bold border border-blue-200 bg-blue-100 text-blue-800 px-2 py-0.5 rounded flex items-center gap-1 w-fit">
                               <span>🗓️ Pipeline Month: {task.pipeline_month}</span>
                             </div>
                           )}
 
                           {/* TARGET LIVE DATE BADGE */}
                           {task.live_date && (
-                            <div className={`mt-1.5 text-[11px] font-bold border px-2 py-0.5 rounded flex items-center gap-1 w-fit ${
-                              isDarkMode ? 'bg-emerald-950 text-emerald-300 border-emerald-800' : 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                            }`}>
+                            <div className="mt-1.5 text-[11px] font-bold border border-emerald-300 bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded flex items-center gap-1 w-fit">
                               <span>🚀 Live:</span> {formatDateOnly(task.live_date)}
                             </div>
                           )}
@@ -821,9 +813,9 @@
 
                           {remStatus === 'UPCOMING' && (
                             <div className={`mt-2.5 text-[11px] font-bold px-2 py-0.5 rounded flex items-center gap-1 w-fit border ${
-                              remType === 'Due Date' ? (isDarkMode ? 'bg-red-950 text-red-300 border-red-800' : 'bg-red-50 text-red-700 border-red-200') :
-                              remType === 'Follow-up' ? (isDarkMode ? 'bg-teal-950 text-teal-300 border-teal-800' : 'bg-teal-50 text-teal-800 border-teal-200') :
-                              (isDarkMode ? 'bg-gray-800 text-gray-300 border-gray-700' : 'bg-slate-100 text-slate-700 border-slate-300')
+                              remType === 'Due Date' ? 'bg-red-50 text-red-700 border-red-200' :
+                              remType === 'Follow-up' ? 'bg-teal-50 text-teal-800 border-teal-200' :
+                              'bg-slate-200 text-slate-700 border-slate-300'
                             }`}>
                               <span>{remType === 'Due Date' ? '📅 Due Date:' : remType === 'Follow-up' ? '📌 Follow-up:' : '🕒 Reminder:'}</span> {formatDate(task.reminder_date)}
                             </div>
