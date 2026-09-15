@@ -14,7 +14,7 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <!-- TOUCH DRAG & DROP POLYFILL FOR MOBILE (iOS Safari / Android Chrome) -->
+  <!-- TOUCH DRAG & DROP POLYFILL FOR MOBILE WITH DELAY CONFIG -->
   <script src="https://cdn.jsdelivr.net/npm/drag-drop-touch@1.3.0/DragDropTouch.js"></script>
 
   <!-- Quill.js Rich Text Editor CSS & JS -->
@@ -487,7 +487,7 @@
         document.body.removeChild(link);
       };
 
-      // DRAG AND DROP HANDLERS
+      // DRAG AND DROP HANDLERS WITH MOBILE FRICTION MITIGATION
       const handleDragStart = (e, taskId) => {
         setDraggedTaskId(taskId);
         e.dataTransfer.setData('text/plain', taskId);
@@ -1012,6 +1012,8 @@
                         >
                           <div className="flex justify-between items-center mb-2">
                             <div className="flex items-center gap-1.5 truncate max-w-[150px]">
+                              {/* DRAG HANDLE FOR MOBILE PREVENTING ACCIDENTAL SWIPES */}
+                              <span className="text-gray-400 text-xs font-bold mr-1 cursor-grab" title="Hold & drag to move">⋮⋮</span>
                               {task.is_project && (
                                 <span className="w-2.5 h-2.5 bg-red-600 rounded-full flex-shrink-0 inline-block shadow-sm" title="Important Project"></span>
                               )}
