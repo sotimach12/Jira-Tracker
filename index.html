@@ -50,6 +50,7 @@
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     const COLUMNS = ['To Do', 'Active Jiras', 'Waiting Jiras', 'Parked/Paused Jiras', 'Done/Closed'];
+    const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     
     // Column Border Colors
     const COLUMN_BORDER_COLORS = {
@@ -60,33 +61,20 @@
       'Done/Closed': 'border-lime-400'
     };
 
-    const UNIFIED_COLOR_OPTIONS = [
-      { name: 'Mint Green', bgValue: 'bg-emerald-100', colValue: 'bg-emerald-100 border-emerald-300 text-emerald-950' },
-      { name: 'Classic Gray', bgValue: 'bg-gray-100', colValue: 'bg-gray-200/90 border-gray-300 text-gray-800' },
-      { name: 'Slate Blue', bgValue: 'bg-slate-200', colValue: 'bg-slate-200 border-slate-300 text-slate-900' },
-      { name: 'Soft Blue', bgValue: 'bg-blue-100', colValue: 'bg-blue-100 border-blue-200 text-blue-950' },
-      { name: 'Warm Amber', bgValue: 'bg-amber-100', colValue: 'bg-amber-100 border-amber-300 text-amber-950' },
-      { name: 'Rose Pink', bgValue: 'bg-rose-100', colValue: 'bg-rose-100 border-rose-300 text-rose-950' },
-      { name: 'Lavender', bgValue: 'bg-purple-100', colValue: 'bg-purple-100 border-purple-300 text-purple-950' },
-      { name: 'Pure White', bgValue: 'bg-white', colValue: 'bg-white/95 border-gray-300 text-gray-900 shadow-md' },
-      { name: 'Electric Blue', bgValue: 'bg-blue-600', colValue: 'bg-blue-600 border-blue-400 text-white shadow-lg' },
-      { name: 'Deep Indigo', bgValue: 'bg-indigo-700', colValue: 'bg-indigo-700 border-indigo-500 text-white shadow-lg' },
-      { name: 'Emerald Green', bgValue: 'bg-emerald-600', colValue: 'bg-emerald-600 border-emerald-400 text-white shadow-lg' },
-      { name: 'Crimson Red', bgValue: 'bg-rose-600', colValue: 'bg-rose-600 border-rose-400 text-white shadow-lg' },
-      { name: 'Sunset Orange', bgValue: 'bg-orange-500', colValue: 'bg-orange-500 border-orange-400 text-white shadow-lg' },
-      { name: 'Golden Amber', bgValue: 'bg-amber-500', colValue: 'bg-amber-500 border-amber-600 text-amber-950 shadow-lg' },
-      { name: 'Royal Violet', bgValue: 'bg-purple-700', colValue: 'bg-purple-700 border-purple-500 text-white shadow-lg' },
-      { name: 'Hot Pink', bgValue: 'bg-fuchsia-600', colValue: 'bg-fuchsia-600 border-fuchsia-400 text-white shadow-lg' },
-      { name: 'Deep Teal', bgValue: 'bg-teal-700', colValue: 'bg-teal-700 border-teal-500 text-white shadow-lg' },
-      { name: 'Midnight Black', bgValue: 'bg-gray-950', colValue: 'bg-gray-950 border-gray-800 text-gray-100 shadow-xl' },
-      { name: 'Dark Gray', bgValue: 'bg-gray-900', colValue: 'bg-gray-900 border-gray-800 text-gray-100 shadow-xl' },
-      { name: 'Charcoal Blue', bgValue: 'bg-slate-900', colValue: 'bg-slate-900 border-slate-800 text-slate-100 shadow-xl' }
+    // SIMPLIFIED 5 BASIC THEME OPTIONS
+    const BASIC_THEME_OPTIONS = [
+      { name: 'Classic Slate', bgValue: 'bg-slate-200', colValue: 'bg-slate-100 border-slate-300 text-slate-900' },
+      { name: 'Pure Light', bgValue: 'bg-gray-100', colValue: 'bg-white border-gray-300 text-gray-900 shadow-md' },
+      { name: 'Mint Emerald', bgValue: 'bg-emerald-100', colValue: 'bg-emerald-50 border-emerald-300 text-emerald-950' },
+      { name: 'Warm Sunset', bgValue: 'bg-amber-100', colValue: 'bg-amber-50 border-amber-300 text-amber-950' },
+      { name: 'Indigo Velvet', bgValue: 'bg-indigo-600', colValue: 'bg-indigo-700 border-indigo-500 text-white shadow-lg' }
     ];
 
     const emptyTask = {
       title: '', jira_id: '', status: 'To Do', problem: '', searched: '',
       actions: '', notes: '', related_files: '', shelf_pages: '', qa: '',
       is_project: false,
+      pipeline_month: '',
       live_date: '',
       reminder_date: '',
       reminder_note: '',
@@ -227,11 +215,11 @@
       );
 
       const [bgColor, setBgColor] = useState(() => {
-        return localStorage.getItem('tracker_bg') || 'bg-blue-600';
+        return localStorage.getItem('tracker_bg') || 'bg-slate-200';
       });
 
       const [colColor, setColColor] = useState(() => {
-        return localStorage.getItem('tracker_col') || UNIFIED_COLOR_OPTIONS[1].colValue;
+        return localStorage.getItem('tracker_col') || BASIC_THEME_OPTIONS[1].colValue;
       });
 
       useEffect(() => { 
@@ -342,7 +330,7 @@
           return (tmp.textContent || tmp.innerText || '').replace(/"/g, '""').trim();
         };
 
-        const headers = ["ID", "Title", "Jira Link/ID", "Status", "Is Project", "Target Live Date", "Reminder Date", "Reminder Type", "Reminder Note", "Problem", "Searched", "Actions", "Notes", "Created At"];
+        const headers = ["ID", "Title", "Jira Link/ID", "Status", "Pipeline Month", "Is Project", "Target Live Date", "Reminder Date", "Reminder Type", "Reminder Note", "Problem", "Searched", "Actions", "Notes", "Created At"];
         
         const csvRows = [
           headers.join(','),
@@ -351,6 +339,7 @@
             `"${(t.title || '').replace(/"/g, '""')}"`,
             `"${(t.jira_id || '').replace(/"/g, '""')}"`,
             `"${t.status || ''}"`,
+            `"${t.pipeline_month || ''}"`,
             `"${t.is_project ? 'Yes' : 'No'}"`,
             `"${formatDateOnly(t.live_date)}"`,
             `"${formatDate(t.reminder_date)}"`,
@@ -364,7 +353,7 @@
           ].join(','))
         ];
 
-        const csvContent = "\uFEFF" + csvRows.join('\n'); // Add UTF-8 BOM for Excel
+        const csvContent = "\uFEFF" + csvRows.join('\n');
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -472,6 +461,7 @@
           shelf_pages: currentTask.shelf_pages || '',
           qa: currentTask.qa || '',
           is_project: !!currentTask.is_project,
+          pipeline_month: currentTask.pipeline_month || '',
           live_date: currentTask.live_date || null,
           reminder_date: currentTask.reminder_date ? new Date(currentTask.reminder_date).toISOString() : null,
           reminder_note: currentTask.reminder_note || '',
@@ -559,7 +549,6 @@
         return 'UPCOMING';
       };
 
-      // EXPANDED SEARCH: SEARCHES TITLE, JIRA ID, PROBLEM, ACTIONS, AND NOTES
       const filteredTasks = tasks.filter(task => {
         if (searchQuery.trim()) {
           const q = searchQuery.toLowerCase();
@@ -568,8 +557,9 @@
           const matchesProblem = (task.problem || '').toLowerCase().includes(q);
           const matchesActions = (task.actions || '').toLowerCase().includes(q);
           const matchesNotes = (task.notes || '').toLowerCase().includes(q);
+          const matchesMonth = (task.pipeline_month || '').toLowerCase().includes(q);
 
-          if (!matchesTitle && !matchesJira && !matchesProblem && !matchesActions && !matchesNotes) {
+          if (!matchesTitle && !matchesJira && !matchesProblem && !matchesActions && !matchesNotes && !matchesMonth) {
             return false;
           }
         }
@@ -600,7 +590,7 @@
                 <span className="absolute inset-y-0 left-0 flex items-center pl-2.5 text-gray-400">🔍</span>
                 <input 
                   type="text" 
-                  placeholder="Search titles, IDs, notes, actions..." 
+                  placeholder="Search titles, IDs, notes, months..." 
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   className="pl-8 pr-8 py-1.5 border border-gray-300 rounded-lg text-xs w-64 bg-white focus:ring-2 focus:ring-blue-500 outline-none font-medium shadow-sm"
@@ -654,6 +644,7 @@
                 </select>
               </div>
 
+              {/* SIMPLIFIED 5 BASIC THEME CONTROLS */}
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[10px] font-bold text-gray-700 uppercase tracking-wider">Page Theme:</span>
@@ -662,7 +653,7 @@
                     onChange={e => changeBgColor(e.target.value)}
                     className="border border-gray-300 rounded px-1.5 py-0.5 text-xs bg-white font-medium focus:ring-1 focus:ring-blue-500 outline-none shadow-sm cursor-pointer min-w-[110px]"
                   >
-                    {UNIFIED_COLOR_OPTIONS.map(c => (
+                    {BASIC_THEME_OPTIONS.map(c => (
                       <option key={c.name} value={c.bgValue}>{c.name}</option>
                     ))}
                   </select>
@@ -675,7 +666,7 @@
                     onChange={e => changeColColor(e.target.value)}
                     className="border border-gray-300 rounded px-1.5 py-0.5 text-xs bg-white font-medium focus:ring-1 focus:ring-blue-500 outline-none shadow-sm cursor-pointer min-w-[110px]"
                   >
-                    {UNIFIED_COLOR_OPTIONS.map(c => (
+                    {BASIC_THEME_OPTIONS.map(c => (
                       <option key={c.name} value={c.colValue}>{c.name}</option>
                     ))}
                   </select>
@@ -755,9 +746,16 @@
 
                           <div className="font-semibold text-gray-900 line-clamp-2">{task.title || 'Untitled Task'}</div>
 
+                          {/* PIPELINE MONTH BADGE */}
+                          {task.pipeline_month && (
+                            <div className="mt-2 text-[10px] font-bold text-blue-800 bg-blue-100 border border-blue-200 px-2 py-0.5 rounded flex items-center gap-1 w-fit">
+                              <span>🗓️ {task.pipeline_month.slice(0, 3)} Pipeline</span>
+                            </div>
+                          )}
+
                           {/* TARGET LIVE DATE BADGE */}
                           {task.live_date && (
-                            <div className="mt-2 text-[11px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded flex items-center gap-1 w-fit">
+                            <div className="mt-1.5 text-[11px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded flex items-center gap-1 w-fit">
                               <span>🚀 Live:</span> {formatDateOnly(task.live_date)}
                             </div>
                           )}
@@ -882,7 +880,7 @@
                   <button onClick={() => setIsModalOpen(false)} className="text-gray-500 hover:text-red-500 font-bold text-xl">✕</button>
                 </div>
                 <div className="space-y-6">
-                  {/* MAIN FIELDS TOP ROW WITH NATIVE DATE PICKER */}
+                  {/* MAIN FIELDS TOP ROW WITH PIPELINE MONTH & NATIVE DATE PICKER */}
                   <div className="grid grid-cols-12 gap-3 items-end">
                     <div className="col-span-3">
                       <label className="block text-xs font-bold text-gray-700 mb-1">Title</label>
@@ -920,7 +918,20 @@
                       </select>
                     </div>
 
-                    {/* NATIVE CALENDAR PICKER WITH EUROPEAN FORMAT */}
+                    {/* PIPELINE MONTH SELECTOR */}
+                    <div className="col-span-2">
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Pipeline Month</label>
+                      <select 
+                        className="w-full border border-gray-300 p-1.5 rounded text-xs bg-white focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer" 
+                        value={currentTask.pipeline_month || ''} 
+                        onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, pipeline_month: val})); }}
+                      >
+                        <option value="">None</option>
+                        {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
+                      </select>
+                    </div>
+
+                    {/* TARGET LIVE DATE */}
                     <div className="col-span-2">
                       <label className="block text-xs font-bold text-gray-700 mb-1">Target Live Date</label>
                       <input 
@@ -930,18 +941,19 @@
                         onChange={e => { const val = e.target.value; setCurrentTask(prev => ({...prev, live_date: val})); }} 
                       />
                     </div>
+                  </div>
 
-                    <div className="col-span-2">
-                      <label className="flex items-center justify-center gap-1.5 cursor-pointer font-bold text-xs text-red-600 bg-red-50 border border-red-200 px-2 py-2 rounded hover:bg-red-100 transition-colors h-[34px]">
-                        <input 
-                          type="checkbox" 
-                          className="w-3.5 h-3.5 text-red-600 rounded focus:ring-red-500 cursor-pointer" 
-                          checked={!!currentTask.is_project} 
-                          onChange={e => { const checked = e.target.checked; setCurrentTask(prev => ({...prev, is_project: checked})); }} 
-                        />
-                        <span>Project</span>
-                      </label>
-                    </div>
+                  {/* PROJECT CHECKBOX ROW */}
+                  <div className="flex justify-end">
+                    <label className="flex items-center gap-1.5 cursor-pointer font-bold text-xs text-red-600 bg-red-50 border border-red-200 px-3 py-1.5 rounded hover:bg-red-100 transition-colors">
+                      <input 
+                        type="checkbox" 
+                        className="w-3.5 h-3.5 text-red-600 rounded focus:ring-red-500 cursor-pointer" 
+                        checked={!!currentTask.is_project} 
+                        onChange={e => { const checked = e.target.checked; setCurrentTask(prev => ({...prev, is_project: checked})); }} 
+                      />
+                      <span>Project</span>
+                    </label>
                   </div>
 
                   {/* REMINDER CATEGORY & NATIVE DATETIME PICKER WITH CLOCK/CALENDAR */}
