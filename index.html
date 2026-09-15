@@ -198,6 +198,9 @@
       const [templateSpaces, setTemplateSpaces] = useState([]);
       const [isModalOpen, setIsModalOpen] = useState(false);
       const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+      const [isMenuOpen, setIsMenuOpen] = useState(false);
+      const [isNotesDrawerOpen, setIsNotesDrawerOpen] = useState(false);
+
       const [currentTask, setCurrentTask] = useState(emptyTask);
       const [isLoading, setIsLoading] = useState(true);
       const [copiedId, setCopiedId] = useState(null);
@@ -205,6 +208,18 @@
       const modalRef = useRef(null);
       const templateModalRef = useRef(null);
       const templateListRef = useRef(null);
+      const menuRef = useRef(null);
+
+      // NON-JIRA QUICK SCRATCHPAD STATE
+      const [quickNotes, setQuickNotes] = useState(() => localStorage.getItem('scratchpad_notes') || '');
+      const [quickTodos, setQuickTodos] = useState(() => {
+        const saved = localStorage.getItem('scratchpad_todos');
+        return saved ? JSON.parse(saved) : [
+          { id: 1, text: 'Review monthly pipeline draft', done: false },
+          { id: 2, text: 'Ping team lead on Slack', done: true }
+        ];
+      });
+      const [newTodoInput, setNewTodoInput] = useState('');
 
       const [searchQuery, setSearchQuery] = useState('');
       const [filterStatus, setFilterStatus] = useState('ALL'); 
@@ -226,6 +241,26 @@
         fetchTemplates();
       }, []);
 
+      // PERSIST SCRATCHPAD TO LOCALSTORAGE
+      useEffect(() => {
+        localStorage.setItem('scratchpad_notes', quickNotes);
+      }, [quickNotes]);
+
+      useEffect(() => {
+        localStorage.setItem('scratchpad_todos', JSON.stringify(quickTodos));
+      }, [quickTodos]);
+
+      // CLOSE MENU WHEN CLICKING OUTSIDE
+      useEffect(() => {
+        const handleClickOutside = (e) => {
+          if (menuRef.current && !menuRef.current.contains(e.target)) {
+            setIsMenuOpen(false);
+          }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+      }, []);
+
       useEffect(() => {
         if (isModalOpen) {
           if (modalRef.current) modalRef.current.scrollTop = 0;
@@ -236,18 +271,6 @@
           }, 50);
         }
       }, [isModalOpen, currentTask.id]);
-
-      useEffect(() => {
-        if (isTemplateModalOpen) {
-          if (templateModalRef.current) templateModalRef.current.scrollTop = 0;
-          if (templateListRef.current) templateListRef.current.scrollTop = 0;
-          setTimeout(() => {
-            if (document.activeElement && typeof document.activeElement.blur === 'function') {
-              document.activeElement.blur();
-            }
-          }, 50);
-        }
-      }, [isTemplateModalOpen]);
 
       useEffect(() => {
         const interval = setInterval(() => {
@@ -315,6 +338,22 @@
       const changeColColor = (colorClass) => {
         setColColor(colorClass);
         localStorage.setItem('tracker_col', colorClass);
+      };
+
+      // SCRATCHPAD ACTIONS
+      const addQuickTodo = (e) => {
+        e.preventDefault();
+        if (!newTodoInput.trim()) return;
+        setQuickTodos(prev => [...prev, { id: Date.now(), text: newTodoInput.trim(), done: false }]);
+        setNewTodoInput('');
+      };
+
+      const toggleQuickTodo = (id) => {
+        setQuickTodos(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
+      };
+
+      const removeQuickTodo = (id) => {
+        setQuickTodos(prev => prev.filter(t => t.id !== id));
       };
 
       // MULTI-REMINDER MANAGEMENT
@@ -469,7 +508,6 @@
         setIsLoading(true);
         const { data, error } = await supabase.from('tasks').select('*').order('created_at', { ascending: false });
         if (!error && data) {
-          // Normalize legacy single-reminder tasks to multi-reminder array
           const normalized = data.map(t => {
             let list = t.reminders;
             if (!Array.isArray(list)) {
@@ -638,7 +676,82 @@
       if (isLoading) return <div className="p-8 text-xl font-bold text-gray-700">Loading Your Secure Jira Tracker...</div>;
 
       return (
-        <div className={`min-h-screen p-8 font-sans transition-colors duration-300 ${bgColor}`}>
+        <div className={`min-h-screen p-8 font-sans transition-colors duration-300 ${bgColor} relative overflow-x-hidden`}>
+          
+          {/* FLOATING SIDE SCRATCHPAD BUTTON */}
+          <button 
+            onClick={() => setIsNotesDrawerOpen(true)}
+            className="fixed right-0 top-1/3 z-40 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-3 px-2 rounded-l-lg shadow-xl flex flex-col items-center gap-1.5 transition-all"
+            title="Open Personal Scratchpad & Non-Jira Tasks"
+          >
+            <span className="text-base">📝</span>
+            <span className="[writing-mode:vertical-lr] rotate-180 tracking-wider uppercase font-semibold">Scratchpad</span>
+          </button>
+
+          {/* SLIDE-OUT SCRATCHPAD DRAWER OVERLAY */}
+          {isNotesDrawerOpen && (
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex justify-end">
+              <div className="bg-white w-96 h-full shadow-2xl p-6 flex flex-col space-y-6 animate-in slide-in-from-right duration-200 border-l border-gray-200">
+                <div className="flex justify-between items-center border-b pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">📝</span>
+                    <h2 className="text-xl font-bold text-gray-900">Personal Scratchpad</h2>
+                  </div>
+                  <button onClick={() => setIsNotesDrawerOpen(false)} className="text-gray-400 hover:text-red-500 font-bold text-xl">✕</button>
+                </div>
+
+                {/* QUICK NON-JIRA TO-DO LIST */}
+                <div className="space-y-3">
+                  <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Quick Non-Jira Tasks</h3>
+                  <form onSubmit={addQuickTodo} className="flex gap-2">
+                    <input 
+                      type="text" 
+                      value={newTodoInput} 
+                      onChange={e => setNewTodoInput(e.target.value)}
+                      placeholder="Add a task (e.g. Ping Slack)..." 
+                      className="flex-1 border border-gray-300 rounded px-2.5 py-1 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                    <button type="submit" className="bg-blue-600 text-white font-bold text-xs px-3 py-1 rounded hover:bg-blue-700">+</button>
+                  </form>
+
+                  <div className="max-h-44 overflow-y-auto space-y-1.5 pr-1">
+                    {quickTodos.map(todo => (
+                      <div key={todo.id} className="flex items-center justify-between bg-gray-50 p-2 rounded border border-gray-200 text-xs">
+                        <label className="flex items-center gap-2 flex-1 cursor-pointer truncate">
+                          <input 
+                            type="checkbox" 
+                            checked={todo.done} 
+                            onChange={() => toggleQuickTodo(todo.id)} 
+                            className="w-3.5 h-3.5 text-blue-600 rounded"
+                          />
+                          <span className={todo.done ? "line-through text-gray-400 truncate" : "text-gray-800 font-medium truncate"}>
+                            {todo.text}
+                          </span>
+                        </label>
+                        <button onClick={() => removeQuickTodo(todo.id)} className="text-gray-400 hover:text-red-500 font-bold pl-2">✕</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* FREEFORM NOTES TEXTAREA */}
+                <div className="flex-1 flex flex-col space-y-2">
+                  <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Raw Quick Notes</h3>
+                  <textarea 
+                    value={quickNotes}
+                    onChange={e => setQuickNotes(e.target.value)}
+                    placeholder="Paste unformatted links, snippet notes, or draft thoughts here..." 
+                    className="flex-1 w-full border border-gray-300 rounded p-3 text-xs bg-amber-50/50 text-gray-800 focus:ring-2 focus:ring-amber-400 outline-none resize-none font-mono leading-relaxed"
+                  ></textarea>
+                </div>
+
+                <div className="text-[10px] text-gray-400 text-center italic border-t pt-2">
+                  Auto-saved locally in browser storage.
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* HEADER BAR SHARES THE COLUMN THEME */}
           <div className={`flex justify-between items-center mb-8 p-4 rounded-xl shadow-lg border gap-4 transition-all ${colColor}`}>
             <div className="flex items-center gap-4">
@@ -674,88 +787,109 @@
             </div>
 
             <div className="flex items-center gap-3">
-              {/* ICON-ONLY ALERT BUTTON */}
-              <button 
-                onClick={requestNotificationAccess} 
-                className={`p-2 rounded-lg shadow font-bold text-sm flex items-center justify-center transition-all ${
-                  notificationPermission === 'granted' ? 'bg-emerald-600 text-white shadow-emerald-600/30' : 'bg-amber-500 text-white hover:bg-amber-600'
-                }`}
-                title={notificationPermission === 'granted' ? 'Desktop Alerts Active' : 'Enable Desktop Alerts'}
-              >
-                🔔
-              </button>
-
-              {/* BLACK FLOPPY DISK SAVE/EXPORT BUTTON */}
-              <button 
-                onClick={exportTasksCSV}
-                className="p-2 rounded-lg shadow font-bold text-sm flex items-center justify-center bg-black hover:bg-gray-800 text-white transition-all border border-gray-700"
-                title="Export all tasks directly into an Excel spreadsheet"
-              >
-                💾
-              </button>
-
-              <div className={`flex items-center gap-1 border rounded-lg p-1 shadow-sm ${
-                isDarkMode ? 'bg-slate-900 border-slate-700' : 'bg-gray-50 border-gray-300'
-              }`}>
-                <span className={`text-[10px] font-bold uppercase tracking-wider pl-1 ${
-                  isDarkMode ? 'text-slate-400' : 'text-gray-600'
-                }`}>Filter:</span>
-                <select 
-                  value={filterStatus} 
-                  onChange={e => setFilterStatus(e.target.value)}
-                  className={`border rounded px-1.5 py-0.5 text-[11px] font-bold focus:ring-1 focus:ring-blue-500 outline-none cursor-pointer max-w-[130px] ${
-                    isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-100' : 'bg-white border-gray-300 text-gray-900'
+              
+              {/* CLEAN 3-LINES HAMBURGER MENU DROPDOWN */}
+              <div className="relative" ref={menuRef}>
+                <button 
+                  onClick={() => setIsMenuOpen(!isMenuOpen)} 
+                  className={`p-2 rounded-lg shadow font-bold text-lg flex items-center justify-center transition-all border ${
+                    isDarkMode ? 'bg-slate-800 border-slate-700 hover:bg-slate-700 text-white' : 'bg-white border-gray-300 hover:bg-gray-100 text-gray-800'
                   }`}
+                  title="Tools & Settings Menu"
                 >
-                  <option value="ALL">All ({activeTasksCount})</option>
-                  <option value="DUE_TODAY">📅 Today ({tasks.filter(t => (t.reminders || []).some(r => getReminderStatus(r.date) === 'DUE_TODAY')).length})</option>
-                  <option value="OVERDUE">⚠️ Overdue ({tasks.filter(t => (t.reminders || []).some(r => getReminderStatus(r.date) === 'OVERDUE')).length})</option>
-                  <option value="TYPE_DUE_DATE">📅 Due Dates ({tasks.filter(t => (t.reminders || []).some(r => r.type === 'Due Date')).length})</option>
-                  <option value="TYPE_FOLLOWUP">📌 Follow-ups ({tasks.filter(t => (t.reminders || []).some(r => r.type === 'Follow-up')).length})</option>
-                  <option value="PROJECTS_ONLY">📌 Projects ({tasks.filter(t => t.is_project).length})</option>
-                </select>
+                  ☰
+                </button>
+
+                {/* HAMBURGER DROPDOWN CONTENT */}
+                {isMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-50 text-gray-900 space-y-4 text-xs font-medium">
+                    
+                    {/* ALERTS & EXPORT ACTIONS */}
+                    <div className="flex items-center justify-between border-b pb-3">
+                      <span className="font-bold text-gray-700">Actions</span>
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => { requestNotificationAccess(); setIsMenuOpen(false); }} 
+                          className={`p-1.5 rounded shadow font-bold text-xs flex items-center gap-1 ${
+                            notificationPermission === 'granted' ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'
+                          }`}
+                          title="Alerts"
+                        >
+                          🔔 Alerts
+                        </button>
+
+                        <button 
+                          onClick={() => { exportTasksCSV(); setIsMenuOpen(false); }}
+                          className="p-1.5 rounded shadow font-bold text-xs bg-black hover:bg-gray-800 text-white flex items-center gap-1"
+                          title="Export CSV"
+                        >
+                          💾 Export
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* FILTER OPTIONS */}
+                    <div className="space-y-1">
+                      <label className="block font-bold text-gray-600 text-[10px] uppercase tracking-wider">Status Filter</label>
+                      <select 
+                        value={filterStatus} 
+                        onChange={e => { setFilterStatus(e.target.value); setIsMenuOpen(false); }}
+                        className="w-full border border-gray-300 rounded p-1.5 font-bold bg-white outline-none cursor-pointer"
+                      >
+                        <option value="ALL">All ({activeTasksCount})</option>
+                        <option value="DUE_TODAY">📅 Today ({tasks.filter(t => (t.reminders || []).some(r => getReminderStatus(r.date) === 'DUE_TODAY')).length})</option>
+                        <option value="OVERDUE">⚠️ Overdue ({tasks.filter(t => (t.reminders || []).some(r => getReminderStatus(r.date) === 'OVERDUE')).length})</option>
+                        <option value="TYPE_DUE_DATE">📅 Due Dates ({tasks.filter(t => (t.reminders || []).some(r => r.type === 'Due Date')).length})</option>
+                        <option value="TYPE_FOLLOWUP">📌 Follow-ups ({tasks.filter(t => (t.reminders || []).some(r => r.type === 'Follow-up')).length})</option>
+                        <option value="PROJECTS_ONLY">📌 Projects ({tasks.filter(t => t.is_project).length})</option>
+                      </select>
+                    </div>
+
+                    {/* THEMES OPTIONS */}
+                    <div className="space-y-2 border-t pt-3">
+                      <label className="block font-bold text-gray-600 text-[10px] uppercase tracking-wider">Appearance</label>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-bold text-gray-700">Page Theme:</span>
+                        <select 
+                          value={bgColor} 
+                          onChange={e => changeBgColor(e.target.value)}
+                          className="border border-gray-300 rounded p-1 text-xs bg-white font-medium outline-none cursor-pointer w-32"
+                        >
+                          {BASIC_THEME_OPTIONS.map(c => (
+                            <option key={c.name} value={c.bgValue}>{c.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-bold text-gray-700">Columns Theme:</span>
+                        <select 
+                          value={colColor} 
+                          onChange={e => changeColColor(e.target.value)}
+                          className="border border-gray-300 rounded p-1 text-xs bg-white font-medium outline-none cursor-pointer w-32"
+                        >
+                          {BASIC_THEME_OPTIONS.map(c => (
+                            <option key={c.name} value={c.colValue}>{c.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* TEMPLATES POPUP */}
+                    <div className="border-t pt-3">
+                      <button 
+                        onClick={() => { setIsTemplateModalOpen(true); setIsMenuOpen(false); }} 
+                        className="w-full bg-indigo-600 text-white p-2 rounded shadow hover:bg-indigo-700 font-bold transition-all text-xs flex items-center justify-center gap-1.5"
+                      >
+                        <span>📋</span> Open Templates Manager
+                      </button>
+                    </div>
+
+                  </div>
+                )}
               </div>
 
-              {/* PAGE THEME & COLUMN THEME CONTROLS */}
-              <div className="flex flex-col gap-1.5">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider opacity-90">Page Theme:</span>
-                  <select 
-                    value={bgColor} 
-                    onChange={e => changeBgColor(e.target.value)}
-                    className={`border rounded px-1.5 py-0.5 text-xs font-medium focus:ring-1 focus:ring-blue-500 outline-none shadow-sm cursor-pointer min-w-[110px] ${
-                      isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-100' : 'bg-white border-gray-300 text-gray-900'
-                    }`}
-                  >
-                    {BASIC_THEME_OPTIONS.map(c => (
-                      <option key={c.name} value={c.bgValue}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider opacity-90">Columns:</span>
-                  <select 
-                    value={colColor} 
-                    onChange={e => changeColColor(e.target.value)}
-                    className={`border rounded px-1.5 py-0.5 text-xs font-medium focus:ring-1 focus:ring-blue-500 outline-none shadow-sm cursor-pointer min-w-[110px] ${
-                      isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-100' : 'bg-white border-gray-300 text-gray-900'
-                    }`}
-                  >
-                    {BASIC_THEME_OPTIONS.map(c => (
-                      <option key={c.name} value={c.colValue}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <button 
-                onClick={() => setIsTemplateModalOpen(true)} 
-                className="bg-indigo-600 text-white px-3.5 py-2 rounded shadow hover:bg-indigo-700 font-bold transition-all text-xs flex items-center gap-1.5"
-              >
-                <span>📋</span> Templates
-              </button>
-
+              {/* NEW JIRA BUTTON STAYS OUTSIDE THE MENU */}
               <button onClick={() => { setCurrentTask({ ...emptyTask }); setIsModalOpen(true); }} className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 font-bold transition-all text-sm">
                 + New Jira
               </button>
