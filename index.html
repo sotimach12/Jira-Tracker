@@ -632,6 +632,7 @@
         return true;
       });
 
+      const activeTasksCount = tasks.filter(t => t.status !== 'Done/Closed').length;
       const isDarkMode = colColor.includes('bg-slate-800') || bgColor.includes('theme-dark');
 
       if (isLoading) return <div className="p-8 text-xl font-bold text-gray-700">Loading Your Secure Jira Tracker...</div>;
@@ -706,7 +707,7 @@
                     isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-100' : 'bg-white border-gray-300 text-gray-900'
                   }`}
                 >
-                  <option value="ALL">All ({tasks.length})</option>
+                  <option value="ALL">All ({activeTasksCount})</option>
                   <option value="DUE_TODAY">📅 Today ({tasks.filter(t => (t.reminders || []).some(r => getReminderStatus(r.date) === 'DUE_TODAY')).length})</option>
                   <option value="OVERDUE">⚠️ Overdue ({tasks.filter(t => (t.reminders || []).some(r => getReminderStatus(r.date) === 'OVERDUE')).length})</option>
                   <option value="TYPE_DUE_DATE">📅 Due Dates ({tasks.filter(t => (t.reminders || []).some(r => r.type === 'Due Date')).length})</option>
