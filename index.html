@@ -417,7 +417,7 @@
           let updated = false;
 
           const newReminders = list.map(rem => {
-            if (rem.date && !rem.notified) {
+            if (rem.date && !rem.notified && !rem.done) {
               const remTime = new Date(rem.date);
               if (remTime <= now) {
                 const jiraId = extractJiraID(task.jira_id) || 'JIRA Task';
@@ -450,7 +450,7 @@
           ...prev,
           reminders: [
             ...(prev.reminders || []),
-            { id: Date.now(), date: '', type: 'Reminder', note: '', notified: false }
+            { id: Date.now(), date: '', type: 'Reminder', note: '', notified: false, done: false }
           ]
         }));
       };
@@ -611,7 +611,8 @@
                   date: t.reminder_date,
                   type: t.reminder_type || 'Reminder',
                   note: t.reminder_note || '',
-                  notified: !!t.reminder_notified
+                  notified: !!t.reminder_notified,
+                  done: false
                 });
               }
             }
@@ -639,7 +640,8 @@
           live_date: currentTask.live_date || null,
           reminders: (currentTask.reminders || []).map(r => ({
             ...r,
-            date: r.date ? new Date(r.date).toISOString() : ''
+            date: r.date ? new Date(r.date).toISOString() : '',
+            done: !!r.done
           })),
           reporter_response: currentTask.reporter_response || ''
         };
@@ -724,11 +726,11 @@
       };
 
       const getTaskHighestReminderStatus = (reminders) => {
-        const list = reminders || [];
+        const activeList = (reminders || []).filter(r => !r.done);
         let hasOverdue = false;
         let hasToday = false;
 
-        for (const r of list) {
+        for (const r of activeList) {
           const st = getReminderStatus(r.date);
           if (st === 'OVERDUE') hasOverdue = true;
           if (st === 'DUE_TODAY') hasToday = true;
@@ -736,7 +738,7 @@
 
         if (hasOverdue) return 'OVERDUE';
         if (hasToday) return 'DUE_TODAY';
-        return list.length > 0 ? 'UPCOMING' : null;
+        return activeList.length > 0 ? 'UPCOMING' : null;
       };
 
       const filteredTasks = tasks.filter(task => {
@@ -754,7 +756,7 @@
           }
         }
 
-        const taskReminders = task.reminders || [];
+        const taskReminders = (task.reminders || []).filter(r => !r.done);
         if (filterStatus === 'PROJECTS_ONLY') return task.is_project;
         if (filterStatus === 'DUE_TODAY') return taskReminders.some(r => getReminderStatus(r.date) === 'DUE_TODAY');
         if (filterStatus === 'OVERDUE') return taskReminders.some(r => getReminderStatus(r.date) === 'OVERDUE');
@@ -977,10 +979,10 @@
                           className="w-full border border-gray-300 rounded p-1.5 font-bold bg-white outline-none cursor-pointer text-xs"
                         >
                           <option value="ALL">All ({activeTasksCount})</option>
-                          <option value="DUE_TODAY">📅 Today ({tasks.filter(t => (t.reminders || []).some(r => getReminderStatus(r.date) === 'DUE_TODAY')).length})</option>
-                          <option value="OVERDUE">⚠️ Overdue ({tasks.filter(t => (t.reminders || []).some(r => getReminderStatus(r.date) === 'OVERDUE')).length})</option>
-                          <option value="TYPE_DUE_DATE">📅 Due Dates ({tasks.filter(t => (t.reminders || []).some(r => r.type === 'Due Date')).length})</option>
-                          <option value="TYPE_FOLLOWUP">📌 Follow-ups ({tasks.filter(t => (t.reminders || []).some(r => r.type === 'Follow-up')).length})</option>
+                          <option value="DUE_TODAY">📅 Today ({tasks.filter(t => (t.reminders || []).filter(r => !r.done).some(r => getReminderStatus(r.date) === 'DUE_TODAY')).length})</option>
+                          <option value="OVERDUE">⚠️ Overdue ({tasks.filter(t => (t.reminders || []).filter(r => !r.done).some(r => getReminderStatus(r.date) === 'OVERDUE')).length})</option>
+                          <option value="TYPE_DUE_DATE">📅 Due Dates ({tasks.filter(t => (t.reminders || []).filter(r => !r.done).some(r => r.type === 'Due Date')).length})</option>
+                          <option value="TYPE_FOLLOWUP">📌 Follow-ups ({tasks.filter(t => (t.reminders || []).filter(r => !r.done).some(r => r.type === 'Follow-up')).length})</option>
                           <option value="PROJECTS_ONLY">📌 Projects ({tasks.filter(t => t.is_project).length})</option>
                         </select>
                       </div>
@@ -1056,8 +1058,8 @@
                   <div className="space-y-3 overflow-y-auto pr-1 flex-1 min-h-[60px]">
                     {columnTasks.map(task => {
                       const cardUrl = getFormattedUrl(task.jira_id);
-                      const remindersList = task.reminders || [];
-                      const highestStatus = getTaskHighestReminderStatus(remindersList);
+                      const remindersList = (task.reminders || []).filter(r => !r.done);
+                      const highestStatus = getTaskHighestReminderStatus(task.reminders);
 
                       let cardBgStyle = "bg-slate-100 border border-slate-300 text-slate-900 border-l-4 " + (COLUMN_BORDER_COLORS[column] || 'border-l-blue-600');
                       if (highestStatus === 'OVERDUE') {
@@ -1122,7 +1124,7 @@
                             </div>
                           )}
 
-                          {/* MULTIPLE REMINDERS BADGES */}
+                          {/* MULTIPLE REMINDERS BADGES (ONLY ACTIVE REMINDERS) */}
                           {remindersList.map((rem, idx) => {
                             const remStatus = getReminderStatus(rem.date);
                             const remType = rem.type || 'Reminder';
@@ -1337,7 +1339,7 @@
                     </label>
                   </div>
 
-                  {/* MULTI-REMINDER SECTION WITH AUTO-EXPANDING TEXTAREA */}
+                  {/* MULTI-REMINDER SECTION WITH DONE CHECKBOX TOGGLE */}
                   <div className="p-3 sm:p-4 border rounded-lg space-y-3 bg-purple-50 border-purple-200">
                     <div className="flex justify-between items-center">
                       <label className="block text-xs sm:text-sm font-bold flex items-center gap-1.5 text-purple-900">
@@ -1357,8 +1359,28 @@
                     ) : (
                       <div className="space-y-2">
                         {(currentTask.reminders || []).map((rem, idx) => (
-                          <div key={rem.id || idx} className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-start bg-white p-2 border border-purple-200 rounded">
+                          <div 
+                            key={rem.id || idx} 
+                            className={`flex flex-col sm:flex-row gap-2 items-stretch sm:items-start p-2 border rounded transition-all ${
+                              rem.done 
+                                ? 'bg-gray-100 border-gray-300 opacity-60' 
+                                : 'bg-white border-purple-200'
+                            }`}
+                          >
                             <div className="flex gap-2 items-center">
+                              <button
+                                type="button"
+                                onClick={() => updateReminder(rem.id, 'done', !rem.done)}
+                                className={`px-2 py-1 rounded text-xs font-bold transition-all ${
+                                  rem.done 
+                                    ? 'bg-emerald-600 text-white' 
+                                    : 'bg-gray-200 text-gray-700 hover:bg-emerald-100 hover:text-emerald-700'
+                                }`}
+                                title={rem.done ? "Mark as active" : "Mark as completed"}
+                              >
+                                {rem.done ? '✓ Done' : 'Mark Done'}
+                              </button>
+
                               <select 
                                 value={rem.type || 'Reminder'} 
                                 onChange={e => updateReminder(rem.id, 'type', e.target.value)}
@@ -1381,7 +1403,9 @@
                             <div className="flex gap-2 items-start flex-1 min-w-0">
                               <textarea 
                                 rows="2"
-                                className="flex-1 border p-1.5 rounded text-xs focus:ring-2 focus:ring-purple-500 outline-none bg-white border-purple-300 text-gray-900 resize-y font-sans leading-relaxed break-words min-w-0" 
+                                className={`flex-1 border p-1.5 rounded text-xs focus:ring-2 focus:ring-purple-500 outline-none bg-white border-purple-300 text-gray-900 resize-y font-sans leading-relaxed break-words min-w-0 ${
+                                  rem.done ? 'line-through text-gray-400' : ''
+                                }`} 
                                 placeholder="Free-text note..." 
                                 value={rem.note || ''} 
                                 onChange={e => updateReminder(rem.id, 'note', e.target.value)} 
