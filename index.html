@@ -741,6 +741,31 @@
         return activeList.length > 0 ? 'UPCOMING' : null;
       };
 
+      // HELPER TO CALCULATE A SORT PRIORITY VALUE FOR CARDS
+      const getTaskPriorityScore = (task) => {
+        const reminders = (task.reminders || []).filter(r => !r.done && r.date);
+        const status = getTaskHighestReminderStatus(task.reminders);
+
+        // Priority 1: Overdue reminders
+        if (status === 'OVERDUE') return 1;
+
+        // Priority 2: Due today reminders
+        if (status === 'DUE_TODAY') return 2;
+
+        // Priority 3: Has upcoming active reminder or target live date
+        const nextDates = reminders.map(r => new Date(r.date).getTime());
+        if (task.live_date) nextDates.push(new Date(task.live_date).getTime());
+
+        if (nextDates.length > 0) {
+          const earliestNextDate = Math.min(...nextDates);
+          // Scaled priority tier for upcoming deadlines (tier 3 + offset by time)
+          return 3 + (earliestNextDate / 10000000000000);
+        }
+
+        // Priority 4: Regular tasks
+        return 999;
+      };
+
       const filteredTasks = tasks.filter(task => {
         if (searchQuery.trim()) {
           const q = searchQuery.toLowerCase();
@@ -1039,10 +1064,14 @@
             </div>
           </div>
 
-          {/* COLUMNS DISPLAY: RESPONSIVE STACK FOR MOBILE OR SWIPEABLE KANBAN FOR DESKTOP */}
+          {/* COLUMNS DISPLAY WITH DYNAMIC PRIORITY SORTING */}
           <div className={isMobileStack ? "flex flex-col gap-6" : "flex gap-4 sm:gap-6 overflow-x-auto pb-4"}>
             {COLUMNS.map(column => {
-              const columnTasks = filteredTasks.filter(t => t.status === column);
+              // SORT TASKS SO OVERDUE AND DUE TODAY TASKS FLOAT TO THE TOP OF EACH COLUMN
+              const columnTasks = filteredTasks
+                .filter(t => t.status === column)
+                .sort((a, b) => getTaskPriorityScore(a) - getTaskPriorityScore(b));
+
               return (
                 <div 
                   key={column} 
