@@ -1063,7 +1063,7 @@
                       if (highestStatus === 'OVERDUE') {
                         cardBgStyle = "bg-red-50 border border-slate-300 text-red-950 border-l-4 border-l-red-600 ring-2 ring-red-500/40";
                       } else if (highestStatus === 'DUE_TODAY') {
-                        cardBgStyle = "bg-purple-50 border border-slate-300 text-purple-950 border-l-4 border-l-purple-600 ring-2 ring-purple-500/40";
+                        cardBgStyle = "bg-amber-50 border border-slate-300 text-amber-950 border-l-4 border-l-amber-500 ring-2 ring-amber-500/40";
                       }
 
                       return (
@@ -1137,7 +1137,7 @@
                               );
                             } else if (remStatus === 'DUE_TODAY') {
                               return (
-                                <div key={rem.id || idx} className="mt-2 text-[10px] font-bold text-purple-900 bg-purple-100 border border-purple-300 px-2 py-0.5 rounded flex items-center gap-1 w-fit">
+                                <div key={rem.id || idx} className="mt-2 text-[10px] font-bold text-amber-900 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded flex items-center gap-1 w-fit">
                                   <span>📅 Due Today ({remType}):</span> {formatDate(rem.date)}
                                 </div>
                               );
