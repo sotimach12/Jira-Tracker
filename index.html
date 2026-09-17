@@ -305,6 +305,26 @@
       // Offline Network Status
       const [isOnline, setIsOnline] = useState(navigator.onLine);
 
+      // FRIDAY BACKUP PROMPT STATE
+      const [showFridayPrompt, setShowFridayPrompt] = useState(false);
+
+      useEffect(() => {
+        const today = new Date();
+        const isFriday = today.getDay() === 5; // 5 = Friday
+        const todayStr = today.toISOString().slice(0, 10);
+        const dismissedDate = localStorage.getItem('friday_prompt_dismissed');
+
+        if (isFriday && dismissedDate !== todayStr) {
+          setShowFridayPrompt(true);
+        }
+      }, []);
+
+      const dismissFridayPrompt = () => {
+        const todayStr = new Date().toISOString().slice(0, 10);
+        localStorage.setItem('friday_prompt_dismissed', todayStr);
+        setShowFridayPrompt(false);
+      };
+
       useEffect(() => {
         const handleOnline = () => setIsOnline(true);
         const handleOffline = () => setIsOnline(false);
@@ -620,31 +640,54 @@
           return;
         }
 
-        const stripHTML = (html) => {
-          if (!html) return '';
-          const tmp = document.createElement('DIV');
-          tmp.innerHTML = html;
-          return (tmp.textContent || tmp.innerText || '').replace(/"/g, '""').trim();
+        const cleanCell = (value) => {
+          if (value === null || value === undefined) return '""';
+          let str = String(value);
+          // Standardize line breaks and escape double quotes
+          str = str.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/"/g, '""');
+          return `"${str}"`;
         };
 
-        const headers = ["ID", "Title", "Jira Link/ID", "Status", "Pipeline Month", "Is Project", "Target Live Date", "Reminders Count", "Problem", "Searched", "Actions", "Notes", "Created At"];
+        const headers = [
+          "Task ID",
+          "Title",
+          "Jira ID / Link",
+          "Status",
+          "Is Project",
+          "Pipeline Month",
+          "Target Live Date",
+          "Problem / Task Description",
+          "Where Searched",
+          "Actions Taken",
+          "Notes",
+          "Attachments & Links",
+          "Shelf Pages",
+          "Questions & Answers",
+          "Response To Reporter",
+          "Reminders (JSON)",
+          "Created At"
+        ];
         
         const csvRows = [
           headers.join(','),
           ...tasks.map(t => [
-            `"${t.id || ''}"`,
-            `"${(t.title || '').replace(/"/g, '""')}"`,
-            `"${(t.jira_id || '').replace(/"/g, '""')}"`,
-            `"${t.status || ''}"`,
-            `"${t.pipeline_month || ''}"`,
-            `"${t.is_project ? 'Yes' : 'No'}"`,
-            `"${formatDateOnly(t.live_date)}"`,
-            `"${(t.reminders || []).length}"`,
-            `"${stripHTML(t.problem)}"`,
-            `"${stripHTML(t.searched)}"`,
-            `"${stripHTML(t.actions)}"`,
-            `"${stripHTML(t.notes)}"`,
-            `"${formatDate(t.created_at)}"`
+            cleanCell(t.id),
+            cleanCell(t.title),
+            cleanCell(t.jira_id),
+            cleanCell(t.status),
+            cleanCell(t.is_project ? 'Yes' : 'No'),
+            cleanCell(t.pipeline_month),
+            cleanCell(t.live_date),
+            cleanCell(t.problem),
+            cleanCell(t.searched),
+            cleanCell(t.actions),
+            cleanCell(t.notes),
+            cleanCell(t.related_files),
+            cleanCell(t.shelf_pages),
+            cleanCell(t.qa),
+            cleanCell(t.reporter_response),
+            cleanCell(JSON.stringify(t.reminders || [])),
+            cleanCell(t.created_at)
           ].join(','))
         ];
 
@@ -653,7 +696,7 @@
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.setAttribute('href', url);
-        link.setAttribute('download', `jira_tracker_export_${new Date().toISOString().slice(0, 10)}.csv`);
+        link.setAttribute('download', `jira_tracker_full_backup_${new Date().toISOString().slice(0, 10)}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -937,6 +980,30 @@
       return (
         <div className={`min-h-screen p-3 sm:p-8 font-sans transition-colors duration-300 ${bgColor} relative overflow-x-hidden`}>
           
+          {/* FRIDAY AUTOMATED EXPORT BANNER */}
+          {showFridayPrompt && (
+            <div className="mb-4 bg-blue-600 text-white px-4 py-3 rounded-xl shadow-lg flex flex-col sm:flex-row items-center justify-between gap-2 border border-blue-400 animate-fadeIn">
+              <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-center sm:text-left">
+                <span className="text-xl">🗓️</span>
+                <span>It's Friday! Time to save your weekly tasks backup.</span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button 
+                  onClick={() => { exportTasksCSV(); dismissFridayPrompt(); }}
+                  className="bg-white text-blue-700 hover:bg-blue-50 font-bold text-xs px-3 py-1.5 rounded shadow-sm transition-all"
+                >
+                  📥 Download CSV Backup
+                </button>
+                <button 
+                  onClick={dismissFridayPrompt}
+                  className="text-blue-200 hover:text-white font-bold text-xs px-2 py-1"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* OFFLINE WARNING BANNER */}
           {!isOnline && (
             <div className="fixed top-0 left-0 right-0 bg-amber-500 text-black px-4 py-2 text-xs sm:text-sm font-bold text-center shadow-lg z-50 flex items-center justify-center gap-2 animate-bounce">
