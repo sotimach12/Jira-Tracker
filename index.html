@@ -301,7 +301,7 @@
       const [bgColor, setBgColor] = useState('bg-slate-200');
       const [colColor, setColColor] = useState(BASIC_THEME_OPTIONS[0].colValue);
 
-      // --- NEW FEATURE 1: Offline Network Status ---
+      // Offline Network Status
       const [isOnline, setIsOnline] = useState(navigator.onLine);
 
       useEffect(() => {
@@ -317,7 +317,7 @@
         };
       }, []);
 
-      // --- NEW FEATURE 2: Undo / Redo History State ---
+      // Undo / Redo History State (Keyboard Driven Only)
       const [undoStack, setUndoStack] = useState([]);
       const [redoStack, setRedoStack] = useState([]);
 
@@ -936,30 +936,6 @@
               <span>Offline — You are currently disconnected. Offline actions are saving locally.</span>
             </div>
           )}
-
-          {/* FLOATING UNDO / REDO CONTROLS */}
-          <div className="fixed left-4 bottom-4 z-40 flex items-center gap-2 bg-white/90 backdrop-blur border border-gray-300 p-1.5 rounded-lg shadow-xl text-xs font-bold">
-            <button 
-              onClick={handleUndo} 
-              disabled={undoStack.length === 0} 
-              className={`px-2 py-1 rounded flex items-center gap-1 transition-all ${
-                undoStack.length > 0 ? 'bg-slate-800 text-white hover:bg-slate-900' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-              }`}
-              title="Undo Action (Ctrl+Z)"
-            >
-              ↩️ Undo
-            </button>
-            <button 
-              onClick={handleRedo} 
-              disabled={redoStack.length === 0} 
-              className={`px-2 py-1 rounded flex items-center gap-1 transition-all ${
-                redoStack.length > 0 ? 'bg-slate-800 text-white hover:bg-slate-900' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-              }`}
-              title="Redo Action (Ctrl+Y)"
-            >
-              ↪️ Redo
-            </button>
-          </div>
 
           <button 
             onClick={() => setIsNotesDrawerOpen(true)}
