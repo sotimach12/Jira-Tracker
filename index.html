@@ -273,6 +273,7 @@
       const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
       const [isMenuOpen, setIsMenuOpen] = useState(false);
       const [isNotesDrawerOpen, setIsNotesDrawerOpen] = useState(false);
+      const [isSyncing, setIsSyncing] = useState(false);
 
       const [isMobileStack, setIsMobileStack] = useState(() => window.innerWidth < 768);
 
@@ -323,7 +324,7 @@
 
       const pushHistory = (action) => {
         setUndoStack(prev => [...prev, action]);
-        setRedoStack([]); // Clear redo stack on new action
+        setRedoStack([]);
       };
 
       const handleUndo = async () => {
@@ -395,6 +396,13 @@
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
       }, []);
+
+      // FORCE DATABASE SYNC HANDLER
+      const forceDatabaseSync = async () => {
+        setIsSyncing(true);
+        await Promise.all([fetchTasks(), fetchTemplates(), fetchUserData()]);
+        setTimeout(() => setIsSyncing(false), 600);
+      };
 
       const fetchUserData = async () => {
         if (!session?.user) return;
@@ -1101,7 +1109,16 @@
                     <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-50 text-gray-900 space-y-4 text-xs font-medium">
                       <div className="flex items-center justify-between border-b pb-3">
                         <span className="font-bold text-gray-700">Actions</span>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <button 
+                            onClick={forceDatabaseSync}
+                            disabled={isSyncing}
+                            className="p-1.5 rounded shadow font-bold text-xs bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1 transition-all disabled:opacity-50"
+                            title="Refetch all data from Supabase"
+                          >
+                            <span className={isSyncing ? "animate-spin" : ""}>🔄</span> Sync
+                          </button>
+
                           <button 
                             onClick={() => { requestNotificationAccess(); setIsMenuOpen(false); }} 
                             className={`p-1.5 rounded shadow font-bold text-xs flex items-center gap-1 ${
@@ -1109,7 +1126,7 @@
                             }`}
                             title="Alerts"
                           >
-                            🔔 Alerts
+                            🔔
                           </button>
 
                           <button 
