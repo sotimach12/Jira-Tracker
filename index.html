@@ -301,6 +301,89 @@
       const [bgColor, setBgColor] = useState('bg-slate-200');
       const [colColor, setColColor] = useState(BASIC_THEME_OPTIONS[0].colValue);
 
+      // --- NEW FEATURE 1: Offline Network Status ---
+      const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+      useEffect(() => {
+        const handleOnline = () => setIsOnline(true);
+        const handleOffline = () => setIsOnline(false);
+
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+
+        return () => {
+          window.removeEventListener('online', handleOnline);
+          window.removeEventListener('offline', handleOffline);
+        };
+      }, []);
+
+      // --- NEW FEATURE 2: Undo / Redo History State ---
+      const [undoStack, setUndoStack] = useState([]);
+      const [redoStack, setRedoStack] = useState([]);
+
+      const pushHistory = (action) => {
+        setUndoStack(prev => [...prev, action]);
+        setRedoStack([]); // Clear redo stack on new action
+      };
+
+      const handleUndo = async () => {
+        if (undoStack.length === 0) return;
+        const lastAction = undoStack[undoStack.length - 1];
+        setUndoStack(prev => prev.slice(0, prev.length - 1));
+
+        if (lastAction.type === 'STATUS_CHANGE') {
+          setTasks(prev => prev.map(t => String(t.id) === String(lastAction.taskId) ? { ...t, status: lastAction.oldStatus } : t));
+          await supabase.from('tasks').update({ status: lastAction.oldStatus }).eq('id', lastAction.taskId);
+          setRedoStack(prev => [...prev, lastAction]);
+        } else if (lastAction.type === 'DELETE_TASK') {
+          const { data, error } = await supabase.from('tasks').insert([lastAction.taskData]).select();
+          if (!error && data) {
+            setTasks(prev => [data[0], ...prev]);
+            setRedoStack(prev => [...prev, { ...lastAction, restoredId: data[0].id }]);
+          }
+        }
+      };
+
+      const handleRedo = async () => {
+        if (redoStack.length === 0) return;
+        const nextAction = redoStack[redoStack.length - 1];
+        setRedoStack(prev => prev.slice(0, prev.length - 1));
+
+        if (nextAction.type === 'STATUS_CHANGE') {
+          setTasks(prev => prev.map(t => String(t.id) === String(nextAction.taskId) ? { ...t, status: nextAction.newStatus } : t));
+          await supabase.from('tasks').update({ status: nextAction.newStatus }).eq('id', nextAction.taskId);
+          setUndoStack(prev => [...prev, nextAction]);
+        } else if (nextAction.type === 'DELETE_TASK') {
+          const targetId = nextAction.restoredId || nextAction.taskId;
+          await supabase.from('tasks').delete().eq('id', targetId);
+          setTasks(prev => prev.filter(t => String(t.id) !== String(targetId)));
+          setUndoStack(prev => [...prev, nextAction]);
+        }
+      };
+
+      // Keyboard Shortcut listener for Cmd/Ctrl+Z and Cmd/Ctrl+Y
+      useEffect(() => {
+        const handleKeyDown = (e) => {
+          if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+
+          if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
+            if (e.shiftKey) {
+              e.preventDefault();
+              handleRedo();
+            } else {
+              e.preventDefault();
+              handleUndo();
+            }
+          } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'y') {
+            e.preventDefault();
+            handleRedo();
+          }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+      }, [undoStack, redoStack]);
+
       useEffect(() => { 
         fetchTasks(); 
         fetchTemplates();
@@ -588,7 +671,9 @@
 
         const targetTask = tasks.find(t => String(t.id) === String(id));
         if (targetTask && targetTask.status !== newStatus) {
+          const oldStatus = targetTask.status;
           setTasks(prev => prev.map(t => String(t.id) === String(id) ? { ...t, status: newStatus } : t));
+          pushHistory({ type: 'STATUS_CHANGE', taskId: id, oldStatus, newStatus });
           await supabase.from('tasks').update({ status: newStatus }).eq('id', id);
         }
         setDraggedTaskId(null);
@@ -711,11 +796,13 @@
 
       const deleteTask = async () => {
         if (window.confirm("Are You Sure You Want To Delete This Task? This Cannot Be Undone.")) {
+          const taskToDelete = { ...currentTask };
           const { error } = await supabase.from('tasks').delete().eq('id', currentTask.id);
           if (error) {
             console.error("Error deleting:", error);
             alert("Failed To Delete Task.");
           } else {
+            pushHistory({ type: 'DELETE_TASK', taskId: taskToDelete.id, taskData: taskToDelete });
             await fetchTasks();
             setIsModalOpen(false);
           }
@@ -842,6 +929,38 @@
       return (
         <div className={`min-h-screen p-3 sm:p-8 font-sans transition-colors duration-300 ${bgColor} relative overflow-x-hidden`}>
           
+          {/* OFFLINE WARNING BANNER */}
+          {!isOnline && (
+            <div className="fixed top-0 left-0 right-0 bg-amber-500 text-black px-4 py-2 text-xs sm:text-sm font-bold text-center shadow-lg z-50 flex items-center justify-center gap-2 animate-bounce">
+              <span>⚠️</span>
+              <span>Offline — You are currently disconnected. Offline actions are saving locally.</span>
+            </div>
+          )}
+
+          {/* FLOATING UNDO / REDO CONTROLS */}
+          <div className="fixed left-4 bottom-4 z-40 flex items-center gap-2 bg-white/90 backdrop-blur border border-gray-300 p-1.5 rounded-lg shadow-xl text-xs font-bold">
+            <button 
+              onClick={handleUndo} 
+              disabled={undoStack.length === 0} 
+              className={`px-2 py-1 rounded flex items-center gap-1 transition-all ${
+                undoStack.length > 0 ? 'bg-slate-800 text-white hover:bg-slate-900' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              }`}
+              title="Undo Action (Ctrl+Z)"
+            >
+              ↩️ Undo
+            </button>
+            <button 
+              onClick={handleRedo} 
+              disabled={redoStack.length === 0} 
+              className={`px-2 py-1 rounded flex items-center gap-1 transition-all ${
+                redoStack.length > 0 ? 'bg-slate-800 text-white hover:bg-slate-900' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              }`}
+              title="Redo Action (Ctrl+Y)"
+            >
+              ↪️ Redo
+            </button>
+          </div>
+
           <button 
             onClick={() => setIsNotesDrawerOpen(true)}
             className={`fixed right-0 top-1/3 z-40 text-white font-bold text-xs py-3 px-2 rounded-l-lg shadow-xl flex flex-col items-center gap-1.5 transition-all ${
@@ -1548,7 +1667,6 @@
       const [isResettingPassword, setIsResettingPassword] = useState(false);
 
       useEffect(() => {
-        // Detect recovery hash in URL when clicking password reset link
         if (window.location.hash.includes('type=recovery')) {
           setIsResettingPassword(true);
         }
