@@ -146,11 +146,13 @@
       return 'https://' + trimmed;
     }
 
-    function Auth() {
+    function Auth({ isResettingPassword, setIsResettingPassword }) {
       const [loading, setLoading] = useState(false);
       const [email, setEmail] = useState('');
       const [password, setPassword] = useState('');
+      const [newPassword, setNewPassword] = useState('');
       const [isSignUp, setIsSignUp] = useState(false);
+      const [isForgotPassword, setIsForgotPassword] = useState(false);
       const [message, setMessage] = useState('');
 
       const handleAuth = async (e) => {
@@ -159,7 +161,13 @@
         setMessage('');
         
         let error;
-        if (isSignUp) {
+        if (isForgotPassword) {
+          const res = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: window.location.origin
+          });
+          error = res.error;
+          if (!error) setMessage('Password reset link sent! Check your email.');
+        } else if (isSignUp) {
           const res = await supabase.auth.signUp({ email, password });
           error = res.error;
           if (!error) setMessage('Success! You Can Now Log In.');
@@ -172,29 +180,87 @@
         setLoading(false);
       };
 
+      const handleUpdatePassword = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        setMessage('');
+
+        const { error } = await supabase.auth.updateUser({ password: newPassword });
+        if (error) {
+          setMessage(error.message);
+        } else {
+          setMessage('Password updated successfully! Redirecting...');
+          setTimeout(() => {
+            setIsResettingPassword(false);
+            window.location.hash = '';
+          }, 1500);
+        }
+        setLoading(false);
+      };
+
+      if (isResettingPassword) {
+        return (
+          <div className="flex items-center justify-center min-h-screen bg-gray-200 p-4">
+            <div className="bg-white p-6 sm:p-8 rounded-lg shadow-xl w-full max-w-sm">
+              <h2 className="text-2xl font-bold mb-4 text-center text-gray-800">Set New Password</h2>
+              {message && <p className={`mb-4 text-sm text-center font-bold ${message.includes('successfully') ? 'text-green-600' : 'text-red-600'}`}>{message}</p>}
+              <form onSubmit={handleUpdatePassword} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">New Password</label>
+                  <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full border p-2.5 rounded focus:ring-2 focus:ring-blue-500 text-sm" required minLength="6" placeholder="Enter new password" />
+                </div>
+                <button type="submit" disabled={loading} className="w-full bg-green-600 text-white font-bold p-3 rounded hover:bg-green-700 text-sm">
+                  {loading ? 'Updating...' : 'Update Password'}
+                </button>
+              </form>
+            </div>
+          </div>
+        );
+      }
+
       return (
         <div className="flex items-center justify-center min-h-screen bg-gray-200 p-4">
           <div className="bg-white p-6 sm:p-8 rounded-lg shadow-xl w-full max-w-sm">
-            <h2 className="text-2xl sm:text-3xl font-bold mb-6 text-center text-gray-800">{isSignUp ? 'Create Account' : 'Welcome Back'}</h2>
-            {message && <p className="mb-4 text-sm text-center font-bold text-red-600">{message}</p>}
+            <h2 className="text-2xl sm:text-3xl font-bold mb-6 text-center text-gray-800">
+              {isForgotPassword ? 'Reset Password' : isSignUp ? 'Create Account' : 'Welcome Back'}
+            </h2>
+            {message && <p className={`mb-4 text-sm text-center font-bold ${message.includes('sent') || message.includes('Success') ? 'text-green-600' : 'text-red-600'}`}>{message}</p>}
             
             <form onSubmit={handleAuth} className="space-y-4">
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">Email</label>
                 <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full border p-2.5 rounded focus:ring-2 focus:ring-blue-500 text-sm" required spellCheck="true" />
               </div>
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">Password</label>
-                <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full border p-2.5 rounded focus:ring-2 focus:ring-blue-500 text-sm" required />
-              </div>
+              
+              {!isForgotPassword && (
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Password</label>
+                  <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full border p-2.5 rounded focus:ring-2 focus:ring-blue-500 text-sm" required={!isForgotPassword} />
+                </div>
+              )}
+
               <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white font-bold p-3 rounded hover:bg-blue-700 mt-4 text-sm">
-                {loading ? 'Processing...' : (isSignUp ? 'Sign Up' : 'Log In')}
+                {loading ? 'Processing...' : (isForgotPassword ? 'Send Reset Link' : isSignUp ? 'Sign Up' : 'Log In')}
               </button>
             </form>
             
-            <p className="mt-6 text-sm text-center text-gray-600 cursor-pointer hover:text-blue-600 font-semibold" onClick={() => {setIsSignUp(!isSignUp); setMessage('');}}>
-              {isSignUp ? 'Already Have An Account? Log In' : "Don't Have An Account? Sign Up"}
-            </p>
+            <div className="mt-6 flex flex-col items-center gap-2 text-sm text-gray-600 font-semibold">
+              {!isForgotPassword && (
+                <p className="cursor-pointer hover:text-blue-600" onClick={() => { setIsForgotPassword(true); setIsSignUp(false); setMessage(''); }}>
+                  Forgot Password?
+                </p>
+              )}
+
+              {isForgotPassword ? (
+                <p className="cursor-pointer hover:text-blue-600" onClick={() => { setIsForgotPassword(false); setMessage(''); }}>
+                  Back to Log In
+                </p>
+              ) : (
+                <p className="cursor-pointer hover:text-blue-600" onClick={() => { setIsSignUp(!isSignUp); setMessage(''); }}>
+                  {isSignUp ? 'Already Have An Account? Log In' : "Don't Have An Account? Sign Up"}
+                </p>
+              )}
+            </div>
           </div>
         </div>
       );
@@ -208,7 +274,6 @@
       const [isMenuOpen, setIsMenuOpen] = useState(false);
       const [isNotesDrawerOpen, setIsNotesDrawerOpen] = useState(false);
 
-      // MOBILE VIEW TOGGLE (STACKED LIST VS KANBAN SWIPE)
       const [isMobileStack, setIsMobileStack] = useState(() => window.innerWidth < 768);
 
       const [currentTask, setCurrentTask] = useState(emptyTask);
@@ -221,7 +286,6 @@
       const templateListRef = useRef(null);
       const menuRef = useRef(null);
 
-      // USER SCRATCHPAD & PREFERENCES (SUPABASE SYNCED)
       const [quickNotes, setQuickNotes] = useState('');
       const [quickTodos, setQuickTodos] = useState([]);
       const [newTodoInput, setNewTodoInput] = useState('');
@@ -249,12 +313,10 @@
         return () => window.removeEventListener('resize', handleResize);
       }, []);
 
-      // FETCH USER SCRATCHPAD AND PREFERENCES FROM SUPABASE
       const fetchUserData = async () => {
         if (!session?.user) return;
         const userId = session.user.id;
 
-        // Fetch User Scratchpad
         const { data: padData } = await supabase
           .from('user_scratchpad')
           .select('*')
@@ -266,7 +328,6 @@
           setQuickTodos(Array.isArray(padData.todos) ? padData.todos : []);
         }
 
-        // Fetch User Preferences (Themes)
         const { data: prefData } = await supabase
           .from('user_preferences')
           .select('*')
@@ -279,7 +340,6 @@
         }
       };
 
-      // SAVE SCRATCHPAD TO SUPABASE
       const saveScratchpadToSupabase = async (newNotes, newTodos) => {
         if (!session?.user) return;
         const userId = session.user.id;
@@ -291,7 +351,6 @@
         });
       };
 
-      // SAVE THEME PREFERENCES TO SUPABASE
       const changeBgColor = async (colorClass) => {
         setBgColor(colorClass);
         if (!session?.user) return;
@@ -314,7 +373,6 @@
         });
       };
 
-      // HELPER: CHECK IF A SCRATCHPAD TODO IS DUE WITHIN 7 DAYS OR OVERDUE
       const isTodoWithinSevenDaysOrOverdue = (dueDateStr) => {
         if (!dueDateStr) return false;
         const now = new Date();
@@ -329,10 +387,8 @@
         return diffDays <= 7;
       };
 
-      // CHECK IF ANY INCOMPLETE SCRATCHPAD TASK HAS AN URGENT DUE DATE (<= 7 DAYS)
       const hasUrgentScratchpadTodo = quickTodos.some(t => !t.done && isTodoWithinSevenDaysOrOverdue(t.dueDate));
 
-      // SCRATCHPAD ACTIONS
       const handleNotesChange = (e) => {
         const val = e.target.value;
         setQuickNotes(val);
@@ -364,7 +420,6 @@
         saveScratchpadToSupabase(quickNotes, updated);
       };
 
-      // CLOSE MENU WHEN CLICKING OUTSIDE
       useEffect(() => {
         const handleClickOutside = (e) => {
           if (menuRef.current && !menuRef.current.contains(e.target)) {
@@ -444,7 +499,6 @@
         }
       };
 
-      // MULTI-REMINDER MANAGEMENT
       const addReminder = () => {
         setCurrentTask(prev => ({
           ...prev,
@@ -469,7 +523,6 @@
         }));
       };
 
-      // EXPORT TO EXCEL (CSV) FORMAT
       const exportTasksCSV = () => {
         if (!tasks || tasks.length === 0) {
           alert("No tasks available to export.");
@@ -515,7 +568,6 @@
         document.body.removeChild(link);
       };
 
-      // DRAG AND DROP HANDLERS WITH STRICT DRAG-HANDLE ACTIVATION
       const handleDragStart = (e, taskId) => {
         if (draggableTaskId !== taskId) {
           e.preventDefault();
@@ -681,7 +733,6 @@
         }));
       };
 
-      // EUROPEAN DATE FORMATTING (DD/MM/YYYY, HH:MM)
       const formatDate = (isoString) => {
         if (!isoString) return '';
         return new Date(isoString).toLocaleString('en-GB', {
@@ -741,28 +792,21 @@
         return activeList.length > 0 ? 'UPCOMING' : null;
       };
 
-      // HELPER TO CALCULATE A SORT PRIORITY VALUE FOR CARDS
       const getTaskPriorityScore = (task) => {
         const reminders = (task.reminders || []).filter(r => !r.done && r.date);
         const status = getTaskHighestReminderStatus(task.reminders);
 
-        // Priority 1: Overdue reminders
         if (status === 'OVERDUE') return 1;
-
-        // Priority 2: Due today reminders
         if (status === 'DUE_TODAY') return 2;
 
-        // Priority 3: Has upcoming active reminder or target live date
         const nextDates = reminders.map(r => new Date(r.date).getTime());
         if (task.live_date) nextDates.push(new Date(task.live_date).getTime());
 
         if (nextDates.length > 0) {
           const earliestNextDate = Math.min(...nextDates);
-          // Scaled priority tier for upcoming deadlines (tier 3 + offset by time)
           return 3 + (earliestNextDate / 10000000000000);
         }
 
-        // Priority 4: Regular tasks
         return 999;
       };
 
@@ -798,7 +842,6 @@
       return (
         <div className={`min-h-screen p-3 sm:p-8 font-sans transition-colors duration-300 ${bgColor} relative overflow-x-hidden`}>
           
-          {/* FLOATING SIDE SCRATCHPAD BUTTON WITH ANIMATED RED PULSE ALERT */}
           <button 
             onClick={() => setIsNotesDrawerOpen(true)}
             className={`fixed right-0 top-1/3 z-40 text-white font-bold text-xs py-3 px-2 rounded-l-lg shadow-xl flex flex-col items-center gap-1.5 transition-all ${
@@ -812,7 +855,6 @@
             <span className="[writing-mode:vertical-lr] rotate-180 tracking-wider uppercase font-semibold text-[10px]">Scratchpad</span>
           </button>
 
-          {/* SLIDE-OUT SCRATCHPAD DRAWER OVERLAY */}
           {isNotesDrawerOpen && (
             <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex justify-end">
               <div className="bg-white w-80 sm:w-96 h-full shadow-2xl p-4 sm:p-6 flex flex-col space-y-6 border-l border-gray-200 overflow-x-hidden">
@@ -824,7 +866,6 @@
                   <button onClick={() => setIsNotesDrawerOpen(false)} className="text-gray-400 hover:text-red-500 font-bold text-xl">✕</button>
                 </div>
 
-                {/* QUICK NON-JIRA TO-DO LIST WITH AUTO-EXPANDING TEXTAREA */}
                 <div className="space-y-3 min-w-0">
                   <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Quick Non-Jira Tasks</h3>
                   <form onSubmit={addQuickTodo} className="flex flex-col gap-2">
@@ -889,7 +930,6 @@
                   </div>
                 </div>
 
-                {/* FREEFORM NOTES TEXTAREA */}
                 <div className="flex-1 flex flex-col space-y-2 min-w-0">
                   <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Raw Quick Notes</h3>
                   <textarea 
@@ -907,7 +947,6 @@
             </div>
           )}
 
-          {/* HEADER BAR SHARES THE COLUMN THEME */}
           <div className={`flex flex-col md:flex-row justify-between items-stretch md:items-center mb-6 p-3 sm:p-4 rounded-xl shadow-lg border gap-3 transition-all ${colColor}`}>
             <div className="flex items-center justify-between md:justify-start gap-2 sm:gap-4">
               <div>
@@ -917,7 +956,6 @@
                 </button>
               </div>
 
-              {/* SEARCH BAR FOR ALL FIELDS */}
               <div className="relative flex-1 max-w-[180px] sm:max-w-xs ml-2">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-2.5 text-gray-400">🔍</span>
                 <input 
@@ -942,8 +980,6 @@
             </div>
 
             <div className="flex items-center justify-between md:justify-end gap-2">
-              
-              {/* MOBILE VIEW LAYOUT TOGGLE (STACKED LIST VS KANBAN SWIPE) */}
               <button 
                 onClick={() => setIsMobileStack(!isMobileStack)}
                 className={`md:hidden px-2.5 py-1.5 rounded-lg text-xs font-bold border flex items-center gap-1 ${
@@ -955,7 +991,6 @@
               </button>
 
               <div className="flex items-center gap-2">
-                {/* CLEAN 3-LINES HAMBURGER MENU DROPDOWN */}
                 <div className="relative" ref={menuRef}>
                   <button 
                     onClick={() => setIsMenuOpen(!isMenuOpen)} 
@@ -967,11 +1002,8 @@
                     ☰
                   </button>
 
-                  {/* HAMBURGER DROPDOWN CONTENT */}
                   {isMenuOpen && (
                     <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-50 text-gray-900 space-y-4 text-xs font-medium">
-                      
-                      {/* ALERTS & EXPORT ACTIONS */}
                       <div className="flex items-center justify-between border-b pb-3">
                         <span className="font-bold text-gray-700">Actions</span>
                         <div className="flex items-center gap-2">
@@ -995,7 +1027,6 @@
                         </div>
                       </div>
 
-                      {/* FILTER OPTIONS */}
                       <div className="space-y-1">
                         <label className="block font-bold text-gray-600 text-[10px] uppercase tracking-wider">Status Filter</label>
                         <select 
@@ -1012,7 +1043,6 @@
                         </select>
                       </div>
 
-                      {/* THEMES OPTIONS */}
                       <div className="space-y-2 border-t pt-3">
                         <label className="block font-bold text-gray-600 text-[10px] uppercase tracking-wider">Appearance</label>
                         <div className="flex items-center justify-between gap-2">
@@ -1042,7 +1072,6 @@
                         </div>
                       </div>
 
-                      {/* TEMPLATES POPUP */}
                       <div className="border-t pt-3">
                         <button 
                           onClick={() => { setIsTemplateModalOpen(true); setIsMenuOpen(false); }} 
@@ -1056,7 +1085,6 @@
                   )}
                 </div>
 
-                {/* NEW JIRA BUTTON STAYS OUTSIDE THE MENU */}
                 <button onClick={() => { setCurrentTask({ ...emptyTask }); setIsModalOpen(true); }} className="bg-blue-600 text-white px-3 sm:px-4 py-2 rounded shadow hover:bg-blue-700 font-bold transition-all text-xs sm:text-sm">
                   + New Jira
                 </button>
@@ -1064,10 +1092,8 @@
             </div>
           </div>
 
-          {/* COLUMNS DISPLAY WITH DYNAMIC PRIORITY SORTING */}
           <div className={isMobileStack ? "flex flex-col gap-6" : "flex gap-4 sm:gap-6 overflow-x-auto pb-4"}>
             {COLUMNS.map(column => {
-              // SORT TASKS SO OVERDUE AND DUE TODAY TASKS FLOAT TO THE TOP OF EACH COLUMN
               const columnTasks = filteredTasks
                 .filter(t => t.status === column)
                 .sort((a, b) => getTaskPriorityScore(a) - getTaskPriorityScore(b));
@@ -1106,7 +1132,6 @@
                         >
                           <div className="flex justify-between items-center mb-2">
                             <div className="flex items-center gap-1.5 truncate max-w-[150px]">
-                              {/* STRICT MOBILE DRAG HANDLE */}
                               <span 
                                 className="text-gray-400 hover:text-gray-600 text-sm font-bold mr-1 cursor-grab active:cursor-grabbing p-1" 
                                 title="Hold & drag to move"
@@ -1139,21 +1164,18 @@
 
                           <div className="font-semibold text-gray-900 text-xs sm:text-sm line-clamp-2">{task.title || 'Untitled Task'}</div>
 
-                          {/* PIPELINE MONTH BADGE */}
                           {task.pipeline_month && (
                             <div className="mt-2 text-[10px] font-bold border border-blue-200 bg-blue-100 text-blue-800 px-2 py-0.5 rounded flex items-center gap-1 w-fit">
                               <span>🗓️ Pipeline Month: {task.pipeline_month}</span>
                             </div>
                           )}
 
-                          {/* TARGET LIVE DATE BADGE */}
                           {task.live_date && (
                             <div className="mt-1.5 text-[10px] sm:text-[11px] font-bold border border-emerald-300 bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded flex items-center gap-1 w-fit">
                               <span>🚀 Live:</span> {formatDateOnly(task.live_date)}
                             </div>
                           )}
 
-                          {/* MULTIPLE REMINDERS BADGES (ONLY ACTIVE REMINDERS) */}
                           {remindersList.map((rem, idx) => {
                             const remStatus = getReminderStatus(rem.date);
                             const remType = rem.type || 'Reminder';
@@ -1192,7 +1214,6 @@
             })}
           </div>
 
-          {/* TEMPLATES MANAGER MODAL WINDOW */}
           {isTemplateModalOpen && (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50">
               <div ref={templateModalRef} className="rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-6 border bg-white border-gray-200 text-gray-900">
@@ -1237,7 +1258,6 @@
                         </div>
                       </div>
                       
-                      {/* RICH EDITOR FOR TEMPLATE */}
                       <div>
                         <RichEditor 
                           id={`template-editor-${space.id}`} 
@@ -1267,7 +1287,6 @@
             </div>
           )}
 
-          {/* TASK DOCUMENT MODAL WINDOW - ALWAYS CLASSIC SLATE LIGHT */}
           {isModalOpen && (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50">
               <div ref={modalRef} className="rounded-xl w-full max-w-4xl max-h-[92vh] overflow-y-auto p-4 sm:p-6 shadow-2xl border bg-white border-gray-200 text-gray-900">
@@ -1281,7 +1300,6 @@
                   <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-red-500 font-bold text-xl">✕</button>
                 </div>
                 <div className="space-y-4 sm:space-y-6">
-                  {/* MAIN FIELDS RESPONSIVE GRID */}
                   <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
                     <div className="sm:col-span-3">
                       <label className="block text-xs font-bold mb-1 text-gray-700">Title</label>
@@ -1330,7 +1348,6 @@
                       </select>
                     </div>
 
-                    {/* PIPELINE MONTH SELECTOR */}
                     <div className="sm:col-span-2">
                       <label className="block text-xs font-bold mb-1 text-gray-700">Pipeline Month</label>
                       <select 
@@ -1343,7 +1360,6 @@
                       </select>
                     </div>
 
-                    {/* TARGET LIVE DATE */}
                     <div className="sm:col-span-2">
                       <label className="block text-xs font-bold mb-1 text-gray-700">Target Live Date</label>
                       <input 
@@ -1355,7 +1371,6 @@
                     </div>
                   </div>
 
-                  {/* PROJECT CHECKBOX ROW */}
                   <div className="flex justify-end">
                     <label className="flex items-center gap-1.5 cursor-pointer font-bold text-xs text-red-600 border border-red-200 px-3 py-1.5 rounded hover:bg-red-100 transition-colors bg-red-50">
                       <input 
@@ -1368,7 +1383,6 @@
                     </label>
                   </div>
 
-                  {/* MULTI-REMINDER SECTION WITH DONE CHECKBOX TOGGLE */}
                   <div className="p-3 sm:p-4 border rounded-lg space-y-3 bg-purple-50 border-purple-200">
                     <div className="flex justify-between items-center">
                       <label className="block text-xs sm:text-sm font-bold flex items-center gap-1.5 text-purple-900">
@@ -1531,14 +1545,29 @@
 
     function App() {
       const [session, setSession] = useState(null);
+      const [isResettingPassword, setIsResettingPassword] = useState(false);
 
       useEffect(() => {
+        // Detect recovery hash in URL when clicking password reset link
+        if (window.location.hash.includes('type=recovery')) {
+          setIsResettingPassword(true);
+        }
+
         supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session));
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+          setSession(session);
+          if (_event === 'PASSWORD_RECOVERY') {
+            setIsResettingPassword(true);
+          }
+        });
         return () => subscription.unsubscribe();
       }, []);
 
-      return !session ? <Auth /> : <WorkspaceTracker session={session} />;
+      if (isResettingPassword) {
+        return <Auth isResettingPassword={true} setIsResettingPassword={setIsResettingPassword} />;
+      }
+
+      return !session ? <Auth isResettingPassword={false} setIsResettingPassword={setIsResettingPassword} /> : <WorkspaceTracker session={session} />;
     }
 
     const root = ReactDOM.createRoot(document.getElementById('root'));
