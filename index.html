@@ -1361,7 +1361,7 @@
                             if (remStatus === 'OVERDUE') {
                               return (
                                 <div key={rem.id || idx} className="mt-2 text-[10px] font-bold text-red-800 bg-red-100 border border-red-300 px-2 py-0.5 rounded flex items-center gap-1 w-fit animate-pulse">
-                                  <span>⚠️️ Overdue ({remType}):</span> {formatDate(rem.date)}
+                                  <span>⚠️ Overdue ({remType}):</span> {formatDate(rem.date)}
                                 </div>
                               );
                             } else if (remStatus === 'DUE_TODAY') {
@@ -1470,7 +1470,10 @@
               <div ref={modalRef} className="rounded-xl w-full max-w-4xl max-h-[92vh] overflow-y-auto p-4 sm:p-6 shadow-2xl border bg-white border-gray-200 text-gray-900">
                 <div className="flex justify-between items-center mb-4 sm:mb-6 border-b pb-3 sm:pb-4 border-gray-200">
                   <div>
-                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Document Template</h2>
+                    {/* DYNAMIC MODAL TITLE: Replaces 'Document Template' with card title */}
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
+                      {currentTask.title || 'Document Template'}
+                    </h2>
                     {currentTask.created_at && (
                       <p className="text-[10px] sm:text-xs mt-0.5 text-gray-500">Created: {formatDate(currentTask.created_at)}</p>
                     )}
