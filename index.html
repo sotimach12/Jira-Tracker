@@ -899,16 +899,15 @@
         return d.toISOString().slice(0, 16);
       };
 
+      // UPDATED: Exact timestamp check so past times turn red immediately on the same day
       const getReminderStatus = (isoString) => {
         if (!isoString) return null;
         const remDate = new Date(isoString);
         const now = new Date();
-        const todayStr = now.toDateString();
-        const remStr = remDate.toDateString();
 
-        if (remDate < now && remStr !== todayStr) {
+        if (remDate < now) {
           return 'OVERDUE';
-        } else if (remStr === todayStr) {
+        } else if (remDate.toDateString() === now.toDateString()) {
           return 'DUE_TODAY';
         }
         return 'UPCOMING';
@@ -1362,7 +1361,7 @@
                             if (remStatus === 'OVERDUE') {
                               return (
                                 <div key={rem.id || idx} className="mt-2 text-[10px] font-bold text-red-800 bg-red-100 border border-red-300 px-2 py-0.5 rounded flex items-center gap-1 w-fit animate-pulse">
-                                  <span>⚠️ Overdue ({remType}):</span> {formatDate(rem.date)}
+                                  <span>⚠️️ Overdue ({remType}):</span> {formatDate(rem.date)}
                                 </div>
                               );
                             } else if (remStatus === 'DUE_TODAY') {
