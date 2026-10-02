@@ -932,7 +932,7 @@
         return activeList.length > 0 ? 'UPCOMING' : null;
       };
 
-      // UPDATED: Priority tasks get score -1000 so they ALWAYS float to the top of the column
+      // Priority tasks get score -1000 so they ALWAYS float to the top of the column
       const getTaskPriorityScore = (task) => {
         if (task.is_priority) return -1000;
 
@@ -1327,6 +1327,9 @@
                               >
                                 ⋮⋮
                               </span>
+                              {task.is_priority && (
+                                <span className="text-xs animate-bounce" title="High Priority">🔥</span>
+                              )}
                               {task.is_project && (
                                 <span className="w-2.5 h-2.5 bg-red-600 rounded-full flex-shrink-0 inline-block shadow-sm" title="Important Project"></span>
                               )}
@@ -1349,13 +1352,6 @@
                           </div>
 
                           <div className="font-semibold text-gray-900 text-xs sm:text-sm line-clamp-2">{task.title || 'Untitled Task'}</div>
-
-                          {/* HIGH PRIORITY BADGE */}
-                          {task.is_priority && (
-                            <div className="mt-2 text-[10px] font-bold border border-red-300 bg-red-100 text-red-800 px-2 py-0.5 rounded flex items-center gap-1 w-fit shadow-xs animate-pulse">
-                              <span>🔥 High Priority</span>
-                            </div>
-                          )}
 
                           {task.pipeline_month && (
                             <div className="mt-2 text-[10px] font-bold border border-blue-200 bg-blue-100 text-blue-800 px-2 py-0.5 rounded flex items-center gap-1 w-fit">
