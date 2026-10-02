@@ -82,6 +82,7 @@
       title: '', jira_id: '', status: 'To Do', problem: '', searched: '',
       actions: '', notes: '', related_files: '', shelf_pages: '', qa: '',
       is_project: false,
+      is_priority: false,
       pipeline_month: '',
       live_date: '',
       reminders: [],
@@ -643,7 +644,6 @@
         const cleanCell = (value) => {
           if (value === null || value === undefined) return '""';
           let str = String(value);
-          // Standardize line breaks and escape double quotes
           str = str.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/"/g, '""');
           return `"${str}"`;
         };
@@ -654,6 +654,7 @@
           "Jira ID / Link",
           "Status",
           "Is Project",
+          "Is Priority",
           "Pipeline Month",
           "Target Live Date",
           "Problem / Task Description",
@@ -676,6 +677,7 @@
             cleanCell(t.jira_id),
             cleanCell(t.status),
             cleanCell(t.is_project ? 'Yes' : 'No'),
+            cleanCell(t.is_priority ? 'Yes' : 'No'),
             cleanCell(t.pipeline_month),
             cleanCell(t.live_date),
             cleanCell(t.problem),
@@ -824,6 +826,7 @@
           shelf_pages: currentTask.shelf_pages || '',
           qa: currentTask.qa || '',
           is_project: !!currentTask.is_project,
+          is_priority: !!currentTask.is_priority,
           pipeline_month: currentTask.pipeline_month || '',
           live_date: currentTask.live_date || null,
           reminders: (currentTask.reminders || []).map(r => ({
@@ -929,7 +932,10 @@
         return activeList.length > 0 ? 'UPCOMING' : null;
       };
 
+      // UPDATED: Priority tasks get score -1000 so they ALWAYS float to the top of the column
       const getTaskPriorityScore = (task) => {
+        if (task.is_priority) return -1000;
+
         const reminders = (task.reminders || []).filter(r => !r.done && r.date);
         const status = getTaskHighestReminderStatus(task.reminders);
 
@@ -964,6 +970,7 @@
 
         const taskReminders = (task.reminders || []).filter(r => !r.done);
         if (filterStatus === 'PROJECTS_ONLY') return task.is_project;
+        if (filterStatus === 'PRIORITY_ONLY') return task.is_priority;
         if (filterStatus === 'DUE_TODAY') return taskReminders.some(r => getReminderStatus(r.date) === 'DUE_TODAY');
         if (filterStatus === 'OVERDUE') return taskReminders.some(r => getReminderStatus(r.date) === 'OVERDUE');
         if (filterStatus === 'TYPE_DUE_DATE') return taskReminders.some(r => r.type === 'Due Date');
@@ -1213,6 +1220,7 @@
                           className="w-full border border-gray-300 rounded p-1.5 font-bold bg-white outline-none cursor-pointer text-xs"
                         >
                           <option value="ALL">All ({activeTasksCount})</option>
+                          <option value="PRIORITY_ONLY">🔥 High Priority ({tasks.filter(t => t.is_priority).length})</option>
                           <option value="DUE_TODAY">📅 Today ({tasks.filter(t => (t.reminders || []).filter(r => !r.done).some(r => getReminderStatus(r.date) === 'DUE_TODAY')).length})</option>
                           <option value="OVERDUE">⚠️ Overdue ({tasks.filter(t => (t.reminders || []).filter(r => !r.done).some(r => getReminderStatus(r.date) === 'OVERDUE')).length})</option>
                           <option value="TYPE_DUE_DATE">📅 Due Dates ({tasks.filter(t => (t.reminders || []).filter(r => !r.done).some(r => r.type === 'Due Date')).length})</option>
@@ -1309,7 +1317,7 @@
                           onClick={() => { setCurrentTask(task); setIsModalOpen(true); }}
                         >
                           <div className="flex justify-between items-center mb-2">
-                            <div className="flex items-center gap-1.5 truncate max-w-[150px]">
+                            <div className="flex items-center gap-1.5 truncate max-w-[170px]">
                               <span 
                                 className="text-gray-400 hover:text-gray-600 text-sm font-bold mr-1 cursor-grab active:cursor-grabbing p-1" 
                                 title="Hold & drag to move"
@@ -1341,6 +1349,13 @@
                           </div>
 
                           <div className="font-semibold text-gray-900 text-xs sm:text-sm line-clamp-2">{task.title || 'Untitled Task'}</div>
+
+                          {/* HIGH PRIORITY BADGE */}
+                          {task.is_priority && (
+                            <div className="mt-2 text-[10px] font-bold border border-red-300 bg-red-100 text-red-800 px-2 py-0.5 rounded flex items-center gap-1 w-fit shadow-xs animate-pulse">
+                              <span>🔥 High Priority</span>
+                            </div>
+                          )}
 
                           {task.pipeline_month && (
                             <div className="mt-2 text-[10px] font-bold border border-blue-200 bg-blue-100 text-blue-800 px-2 py-0.5 rounded flex items-center gap-1 w-fit">
@@ -1552,7 +1567,18 @@
                     </div>
                   </div>
 
-                  <div className="flex justify-end">
+                  {/* PROJECT & HIGH PRIORITY CHECKBOXES */}
+                  <div className="flex justify-end gap-2">
+                    <label className="flex items-center gap-1.5 cursor-pointer font-bold text-xs text-amber-700 border border-amber-300 px-3 py-1.5 rounded hover:bg-amber-100 transition-colors bg-amber-50">
+                      <input 
+                        type="checkbox" 
+                        className="w-3.5 h-3.5 text-amber-600 rounded focus:ring-amber-500 cursor-pointer" 
+                        checked={!!currentTask.is_priority} 
+                        onChange={e => { const checked = e.target.checked; setCurrentTask(prev => ({...prev, is_priority: checked})); }} 
+                      />
+                      <span>🔥 High Priority</span>
+                    </label>
+
                     <label className="flex items-center gap-1.5 cursor-pointer font-bold text-xs text-red-600 border border-red-200 px-3 py-1.5 rounded hover:bg-red-100 transition-colors bg-red-50">
                       <input 
                         type="checkbox" 
