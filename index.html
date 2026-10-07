@@ -486,18 +486,25 @@
         });
       };
 
-      const isTodoWithinSevenDaysOrOverdue = (dueDateStr) => {
-        if (!dueDateStr) return false;
+      // Scratchpad Due Urgency Evaluation
+      const getScratchpadTodoUrgency = (dueDateStr) => {
+        if (!dueDateStr) return 'NONE';
         const now = new Date();
         const due = new Date(dueDateStr);
 
         const diffTime = due.getTime() - now.getTime();
         const diffDays = diffTime / (1000 * 60 * 60 * 24);
 
-        return diffDays <= 7;
+        if (diffDays <= 0) {
+          return 'DUE_TODAY_OR_OVERDUE'; // Red & Pulsing
+        } else if (diffDays <= 7) {
+          return 'DUE_SOON'; // Orange & Static
+        }
+        return 'NONE';
       };
 
-      const hasUrgentScratchpadTodo = quickTodos.some(t => !t.done && isTodoWithinSevenDaysOrOverdue(t.dueDate));
+      const hasRedScratchpadTodo = quickTodos.some(t => !t.done && getScratchpadTodoUrgency(t.dueDate) === 'DUE_TODAY_OR_OVERDUE');
+      const hasOrangeScratchpadTodo = quickTodos.some(t => !t.done && getScratchpadTodoUrgency(t.dueDate) === 'DUE_SOON');
 
       const handleNotesChange = (e) => {
         const val = e.target.value;
@@ -1037,16 +1044,25 @@
             </div>
           )}
 
+          {/* SCRATCHPAD DRAWER TOGGLE BUTTON */}
           <button 
             onClick={() => setIsNotesDrawerOpen(true)}
             className={`fixed right-0 top-1/3 z-40 text-white font-bold text-xs py-3 px-2 rounded-l-lg shadow-xl flex flex-col items-center gap-1.5 transition-all ${
-              hasUrgentScratchpadTodo 
+              hasRedScratchpadTodo 
                 ? 'bg-red-600 animate-pulse ring-2 ring-red-400' 
+                : hasOrangeScratchpadTodo 
+                ? 'bg-orange-500' 
                 : 'bg-indigo-600 hover:bg-indigo-700'
             }`}
-            title={hasUrgentScratchpadTodo ? "Warning: Non-Jira tasks due within 7 days or overdue!" : "Open Personal Scratchpad & Non-Jira Tasks"}
+            title={
+              hasRedScratchpadTodo 
+                ? "Warning: Non-Jira task due TODAY or OVERDUE!" 
+                : hasOrangeScratchpadTodo 
+                ? "Notice: Non-Jira task due within 7 days!" 
+                : "Open Personal Scratchpad & Non-Jira Tasks"
+            }
           >
-            <span className="text-base">{hasUrgentScratchpadTodo ? '⚠️' : '📝'}</span>
+            <span className="text-base">{hasRedScratchpadTodo ? '⚠️' : hasOrangeScratchpadTodo ? '⏰' : '📝'}</span>
             <span className="[writing-mode:vertical-lr] rotate-180 tracking-wider uppercase font-semibold text-[10px]">Scratchpad</span>
           </button>
 
@@ -1087,13 +1103,18 @@
                       <p className="text-xs text-gray-400 italic">No non-Jira tasks added yet.</p>
                     ) : (
                       quickTodos.map(todo => {
-                        const isUrgent = !todo.done && isTodoWithinSevenDaysOrOverdue(todo.dueDate);
+                        const urgency = !todo.done ? getScratchpadTodoUrgency(todo.dueDate) : 'NONE';
+                        const isRed = urgency === 'DUE_TODAY_OR_OVERDUE';
+                        const isOrange = urgency === 'DUE_SOON';
+
                         return (
                           <div 
                             key={todo.id} 
                             className={`flex items-start justify-between p-2 rounded border text-xs transition-all min-w-0 ${
-                              isUrgent 
+                              isRed 
                                 ? 'bg-red-50 border-red-300 text-red-950 font-semibold' 
+                                : isOrange 
+                                ? 'bg-orange-50 border-orange-300 text-orange-950 font-semibold' 
                                 : 'bg-gray-50 border-gray-200 text-gray-800'
                             }`}
                           >
@@ -1110,9 +1131,15 @@
                                 </span>
                                 {todo.dueDate && (
                                   <span className={`text-[10px] font-bold mt-1 ${
-                                    todo.done ? 'text-gray-400 line-through' : isUrgent ? 'text-red-700 animate-pulse' : 'text-gray-500'
+                                    todo.done 
+                                      ? 'text-gray-400 line-through' 
+                                      : isRed 
+                                      ? 'text-red-700 animate-pulse' 
+                                      : isOrange 
+                                      ? 'text-orange-700' 
+                                      : 'text-gray-500'
                                   }`}>
-                                    📅 Due: {formatDate(todo.dueDate)} {isUrgent && !todo.done ? '(Urgent)' : ''}
+                                    📅 Due: {formatDate(todo.dueDate)} {isRed ? '(URGENT - DUE TODAY/OVERDUE)' : isOrange ? '(Due Soon)' : ''}
                                   </span>
                                 )}
                               </div>
