@@ -1599,15 +1599,27 @@
                     <div className="sm:col-span-2">
                       <div className="flex justify-between items-center mb-1">
                         <label className="block text-xs font-bold text-gray-700">Target Live Date</label>
-                        <label className="flex items-center gap-1 cursor-pointer text-[10px] font-bold text-emerald-800" title="Mark date as approximate (~)">
-                          <input 
-                            type="checkbox" 
-                            className="w-3 h-3 text-emerald-600 rounded focus:ring-emerald-500 cursor-pointer"
-                            checked={!!currentTask.live_date_is_approx}
-                            onChange={e => { const checked = e.target.checked; setCurrentTask(prev => ({...prev, live_date_is_approx: checked})); }}
-                          />
-                          <span>Approx</span>
-                        </label>
+                        <div className="flex items-center gap-2">
+                          {currentTask.live_date && (
+                            <button
+                              type="button"
+                              onClick={() => setCurrentTask(prev => ({ ...prev, live_date: '', live_date_is_approx: false }))}
+                              className="text-[10px] font-bold text-red-600 hover:text-red-800 underline cursor-pointer"
+                              title="Clear Live Date"
+                            >
+                              Clear
+                            </button>
+                          )}
+                          <label className="flex items-center gap-1 cursor-pointer text-[10px] font-bold text-emerald-800" title="Mark date as approximate (~)">
+                            <input 
+                              type="checkbox" 
+                              className="w-3 h-3 text-emerald-600 rounded focus:ring-emerald-500 cursor-pointer"
+                              checked={!!currentTask.live_date_is_approx}
+                              onChange={e => { const checked = e.target.checked; setCurrentTask(prev => ({...prev, live_date_is_approx: checked})); }}
+                            />
+                            <span>Approx</span>
+                          </label>
+                        </div>
                       </div>
                       <input 
                         type="date" 
